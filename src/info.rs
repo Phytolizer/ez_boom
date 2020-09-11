@@ -1,4 +1,4 @@
-use crate::game::mobj::MobjFlag;
+use crate::logic::mobj::MobjFlag;
 use crate::{misc, sounds::Sfx};
 use lazy_static::lazy_static;
 use misc::fixed::FRACUNIT;
