@@ -17,11 +17,12 @@ mod think;
 use lazy_static::lazy_static;
 use parking_lot::RwLock;
 
-use std::env;
+use std::{env, fs};
 
 lazy_static! {
     static ref ARGS: RwLock<Vec<String>> = RwLock::new(vec![]);
     pub static ref FORCE_OLD_BSP: RwLock<bool> = RwLock::new(false);
+    static ref SAVE_GAME_BASE: RwLock<String> = RwLock::new(String::new());
 }
 
 fn init_statics() {
@@ -100,7 +101,35 @@ fn doom_main_setup() {
 
     args::handle_loose_files();
 
-    dbg!(&*ARGS.read());
+    identify_version();
+}
+
+fn identify_version() {
+    *SAVE_GAME_BASE.write() = env::var("DOOMSAVEDIR").unwrap_or_else(|_| doom_exe_dir());
+    if let Some(i) = args::check_parm("-save") {
+        if i < ARGS.read().len() - 1 {
+            let path = &ARGS.read()[i + 1];
+            if let Ok(true) = fs::metadata(path).map(|m| m.is_dir()) {
+                *SAVE_GAME_BASE.write() = path.clone();
+            } else {
+                lprint!(
+                    OutputLevel::ERROR,
+                    "Error: -save path does not exist. Using {} instead\n",
+                    SAVE_GAME_BASE.read()
+                );
+            }
+        }
+    }
+    normalize_slashes(&mut *SAVE_GAME_BASE.write());
+    dbg!(&*SAVE_GAME_BASE.read());
+}
+
+fn normalize_slashes(path: &mut String) {
+    *path = fs::canonicalize(&path)
+        .unwrap()
+        .to_str()
+        .unwrap()
+        .to_string();
 }
 
 fn setup_console_masks() {
@@ -228,6 +257,7 @@ fn doom_exe_dir() -> String {
                 _ => panic!("creating file: {}", e),
             },
         }
+        normalize_slashes(&mut DOOM_EXE_DIR.write().as_mut().unwrap());
     }
     DOOM_EXE_DIR.read().as_ref().unwrap().clone()
 }
