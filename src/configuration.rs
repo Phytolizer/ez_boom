@@ -2,7 +2,7 @@
 
 use bounded_integer::bounded_integer;
 use num::clamp;
-use std::{convert::TryFrom, env, ops, path::PathBuf, fmt::Display};
+use std::{convert::TryFrom, env, fmt::Display, ops, path::PathBuf};
 
 use crate::{
     doom::def::GameMission,
@@ -43,6 +43,12 @@ pub(crate) struct Configuration {
 
     pub(crate) forward_move: [i32; 2],
     pub(crate) side_move: [i32; 2],
+
+    pub(crate) no_music: bool,
+    pub(crate) no_sfx: bool,
+
+    pub(crate) no_draw: bool,
+    pub(crate) no_blit: bool,
 }
 
 impl Default for Configuration {
@@ -75,6 +81,12 @@ impl Default for Configuration {
 
             forward_move: [0x19, 0x32],
             side_move: [0x18, 0x28],
+
+            no_music: false,
+            no_sfx: false,
+
+            no_draw: false,
+            no_blit: false,
         }
     }
 }
@@ -161,14 +173,18 @@ impl TryFrom<u8> for SkillLevel {
 
 impl Display for SkillLevel {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{}", match self {
-            SkillLevel::None => "None",
-            SkillLevel::Itytd => "I'm Too Young To Die",
-            SkillLevel::Hntr => "Hey, Not Too Rough",
-            SkillLevel::Hmp => "Hurt Me Plenty",
-            SkillLevel::Uv => "Ultra-Violence",
-            SkillLevel::Nm => "Nightmare",
-        })
+        write!(
+            f,
+            "{}",
+            match self {
+                SkillLevel::None => "None",
+                SkillLevel::Itytd => "I'm Too Young To Die",
+                SkillLevel::Hntr => "Hey, Not Too Rough",
+                SkillLevel::Hmp => "Hurt Me Plenty",
+                SkillLevel::Uv => "Ultra-Violence",
+                SkillLevel::Nm => "Nightmare",
+            }
+        )
     }
 }
 

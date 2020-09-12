@@ -291,6 +291,13 @@ fn doom_main_setup(configuration: &mut Configuration) {
             }
         }
     }
+
+    let no_sound = configuration.args.check_parm("-nosound").is_some();
+    configuration.no_music = no_sound || configuration.args.check_parm("-nomusic").is_some();
+    configuration.no_sfx = no_sound || configuration.args.check_parm("-nosfx").is_some();
+
+    configuration.no_draw = configuration.args.check_parm("-nodraw").is_some();
+    configuration.no_blit = configuration.args.check_parm("-noblit").is_some();
 }
 
 fn identify_version(configuration: &mut Configuration) {
