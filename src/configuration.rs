@@ -2,7 +2,7 @@
 
 use bounded_integer::bounded_integer;
 use num::clamp;
-use std::{convert::TryFrom, env, ops, path::PathBuf};
+use std::{convert::TryFrom, env, ops, path::PathBuf, fmt::Display};
 
 use crate::{
     doom::def::GameMission,
@@ -156,6 +156,19 @@ impl TryFrom<u8> for SkillLevel {
             4 => Ok(SkillLevel::Nm),
             _ => Err(format!("Invalid skill level {}", value)),
         }
+    }
+}
+
+impl Display for SkillLevel {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", match self {
+            SkillLevel::None => "None",
+            SkillLevel::Itytd => "I'm Too Young To Die",
+            SkillLevel::Hntr => "Hey, Not Too Rough",
+            SkillLevel::Hmp => "Hurt Me Plenty",
+            SkillLevel::Uv => "Ultra-Violence",
+            SkillLevel::Nm => "Nightmare",
+        })
     }
 }
 

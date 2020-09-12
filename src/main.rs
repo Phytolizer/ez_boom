@@ -22,6 +22,7 @@ use counted_array::counted_array;
 use faccess::PathExt;
 use lazy_static::lazy_static;
 use parking_lot::RwLock;
+use regex::Regex;
 
 use defs::{PACKAGE_NAME, VERSION_DATE};
 use doom::def::{GameMission, GameMode, Language};
@@ -179,7 +180,7 @@ fn doom_main_setup(configuration: &mut Configuration) {
 
     let p = match configuration.args.check_parm("-turbo") {
         Some(it) => it,
-        _ => return,
+        _ => configuration.args.len(),
     };
     let scale = if p < configuration.args.len() - 1 {
         configuration.args[p + 1].parse::<i32>().unwrap_or(0)
@@ -188,7 +189,7 @@ fn doom_main_setup(configuration: &mut Configuration) {
     };
     let scale = num::clamp(scale, 10, 400);
 
-    lprint!(OutputLevel::CONFIRM, "turbo scale: {}%\n", scale);
+    lprint!(OutputLevel::CONFIRM, "Turbo scale: {}%.\n", scale);
     configuration.forward_move = [
         configuration.forward_move[0] * scale / 100,
         configuration.forward_move[1] * scale / 100,
@@ -203,6 +204,91 @@ fn doom_main_setup(configuration: &mut Configuration) {
             configuration.start_skill =
                 SkillLevel::try_from(configuration.args[p + 1].as_bytes()[0] - b'1')
                     .unwrap_or_else(|e| error(e));
+
+            lprint!(
+                OutputLevel::CONFIRM,
+                "Skill level set to {}.",
+                configuration.start_skill
+            );
+        }
+    }
+
+    if let Some(p) = configuration.args.check_parm("-episode") {
+        if p < configuration.args.len() - 1 {
+            configuration.start_episode =
+                (configuration.args[p + 1].as_bytes()[0].saturating_sub(b'0')) as usize;
+            lprint!(
+                OutputLevel::CONFIRM,
+                "Starting on episode {}.\n",
+                configuration.start_episode
+            );
+        }
+    }
+
+    if let Some(p) = configuration.args.check_parm("-timer") {
+        if p < configuration.args.len() - 1 && configuration.deathmatch > 0 {
+            let time: usize = configuration.args[p + 1].parse().unwrap_or_else(|_| {
+                error(format!(
+                    "Error: non-integer timer: {}",
+                    configuration.args[p + 1]
+                ))
+            });
+            lprint!(
+                OutputLevel::CONFIRM,
+                "Levels will end after {} minute{}.\n",
+                time,
+                if time != 1 { "s" } else { "" }
+            );
+
+            // FIXME time is not actually used to set any variable here
+        }
+    }
+
+    if let Some(p) = configuration.args.check_parm("-avg") {
+        if p < configuration.args.len() - 1 && configuration.deathmatch > 0 {
+            lprint!(
+                OutputLevel::CONFIRM,
+                "Austin Virtual Gaming: Levels will end after 20 minutes.\n"
+            );
+        }
+    }
+
+    if let Some(p) = configuration.args.check_parms(&["-warp", "-wart"]) {
+        configuration.start_map = 1;
+        configuration.autostart = true;
+        if p < configuration.args.len() - 1 {
+            let starts_with_number_regex = Regex::new(r"^(\d+)").unwrap();
+            if configuration.game_mode == GameMode::Commercial {
+                configuration.start_map =
+                    match starts_with_number_regex.captures(&configuration.args[p + 1]) {
+                        Some(cap) => cap.get(1).unwrap().as_str().parse().unwrap(),
+                        None => 1,
+                    };
+                lprint!(
+                    OutputLevel::CONFIRM,
+                    "Warping to map {}.\n",
+                    configuration.start_map
+                );
+            } else {
+                if let Some(cap) = starts_with_number_regex.captures(&configuration.args[p + 1]) {
+                    // unwrapping because it matched the regex already
+                    configuration.start_episode = cap.get(1).unwrap().as_str().parse().unwrap();
+                    configuration.start_map = 1;
+                    if p < configuration.args.len() - 2 {
+                        if let Some(cap) =
+                            starts_with_number_regex.captures(&configuration.args[p + 2])
+                        {
+                            configuration.start_map = cap.get(1).unwrap().as_str().parse().unwrap();
+                        }
+                    }
+                }
+                lprint!(
+                    OutputLevel::CONFIRM,
+                    "Warping to episode {}, map {}.\n",
+                    configuration.start_episode,
+                    configuration.start_map
+                );
+            }
         }
     }
 }

@@ -1,6 +1,6 @@
 /// Handle IWAD-dependent animations, &c based
 /// on the value of this enum
-#[derive(Debug)]
+#[derive(Debug, PartialEq)]
 pub(crate) enum GameMode {
     TBD,
     Shareware,

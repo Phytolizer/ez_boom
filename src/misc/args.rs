@@ -34,6 +34,11 @@ pub(crate) trait ArgList {
     /// `Some(i)`, where `i` is the index into `self` where the arg is
     /// located. If the arg is not found, it returns `None`.
     fn check_parm(&self, check: &str) -> Option<usize>;
+    /// Check for the existence of any parameter in the `checks` slice.
+    /// This is used for parameter aliases.
+    ///
+    /// The return value is identical to `check_parm`'s.
+    fn check_parms(&self, checks: &[&str]) -> Option<usize>;
     /// Check for conflicting parameters and error out if some are found.
     ///
     /// Right now, this only applies to `-playdemo`, `-timedemo`, `-fastdemo`,
@@ -51,16 +56,30 @@ pub(crate) trait ArgList {
 
 impl ArgList for Args {
     fn check_parm(&self, check: &str) -> Option<usize> {
-        let mut i = self.len() - 1;
-        loop {
-            if self[i] == check {
+        for (i, arg) in self.iter().enumerate().rev() {
+            if arg == check {
                 return Some(i);
             }
-            if i == 0 {
-                return None;
-            }
-            i -= 1;
         }
+        // let mut i = self.len() - 1;
+        // loop {
+        //     if self[i] == check {
+        //         return Some(i);
+        //     }
+        //     if i == 0 {
+        //         return None;
+        //     }
+        //     i -= 1;
+        // }
+        None
+    }
+    fn check_parms(&self, checks: &[&str]) -> Option<usize> {
+        for check in checks {
+            if let Some(i) = self.check_parm(check) {
+                return Some(i);
+            }
+        }
+        None
     }
     fn check_arg_conflicts(&self) {
         let recording_attempt = self.check_parm(PARM_RECORD).is_some()
