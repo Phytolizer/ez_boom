@@ -7,6 +7,7 @@ use crate::{
 use lazy_static::lazy_static;
 use parking_lot::RwLock;
 
+// TODO delete these dumb statics
 lazy_static! {
     pub(crate) static ref CODEPTR: RwLock<[ActionF; Statenum::NumStates as usize]> =
         RwLock::new([|| (); Statenum::NumStates as usize]);
@@ -18,6 +19,7 @@ lazy_static! {
         RwLock::new([""; Sfx::NUMSFX as usize + 1]);
 }
 
+/// Set up the initial BEX tables, initializing them with their default values.
 pub fn build_bex_tables() {
     let mut i = 0;
     while i < Statenum::ExtraStates as usize {
@@ -26,6 +28,7 @@ pub fn build_bex_tables() {
     }
     while i < Statenum::NumStates as usize {
         let mut state = &mut STATES.write()[i];
+        // invisible sprite
         state.sprite = Spritenum::TNT1;
         state.frame = 0;
         state.tics = -1;
@@ -34,6 +37,8 @@ pub fn build_bex_tables() {
         CODEPTR.write()[i] = state.action;
         i += 1;
     }
+
+    // initialize runtime-modifiable tables with the constant initial values
 
     for (i, sprname) in SPRNAMES.iter().enumerate() {
         SPRITENAMES.write()[i] = sprname;
@@ -44,6 +49,8 @@ pub fn build_bex_tables() {
     for (i, sfx) in SFX.iter().enumerate().skip(1) {
         SOUNDNAMES.write()[i] = sfx.name;
     }
+    // set dropped items for enemies that drop items
+    // TODO remove this variable
     let upper_bound_remove_me = MOBJINFO.read().len();
     for i in 0..upper_bound_remove_me {
         let mobj = &mut MOBJINFO.write()[i];

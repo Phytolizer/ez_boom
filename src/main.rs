@@ -1,21 +1,35 @@
-mod configuration;
-use args::ArgList;
-use configuration::{Configuration, SkillLevel};
+//! A Boom-derived sourceport for Doom.
 
+/// Contains the monolithic Configuration struct, which holds most of the
+/// values needed upon initializing and running the game.
+mod configuration;
+
+/// Contains some definitions needed for helpful output, such as the
+/// package name and version.
 mod defs;
+/// Contains utilities related to .deh and .bex file reading/parsing.
 mod deh;
+/// Contains some core game logic, and useful definitions.
 mod doom;
+/// TODO: Contains nothing yet.
 mod game;
+/// Contains many enums related to game code, such as state identifiers.
 mod info;
+/// Contains some core game logic.
 mod logic;
 
+/// Contains miscellaneous functions and structs that just don't fit anywhere else.
 mod misc;
-use misc::args;
-use misc::lprint::OutputLevel;
 
+/// Contains enums and structs related to music and sound effects.
 mod sounds;
+/// Contains useful system-level functions.
 mod system;
+/// Contains useful constants.
+mod tables;
+/// Contains types related to thinkers.
 mod think;
+/// Contains types and functions related to reading the .wad format.
 mod wad;
 
 use counted_array::counted_array;
@@ -24,11 +38,16 @@ use lazy_static::lazy_static;
 use parking_lot::RwLock;
 use regex::Regex;
 
+use args::ArgList;
+use configuration::{Configuration, SkillLevel};
 use defs::{PACKAGE_NAME, VERSION_DATE};
 use doom::def::{GameMission, GameMode, Language};
 use doom::english::DEVSTR;
 use io::SeekFrom;
+use misc::args;
+use misc::lprint::OutputLevel;
 use std::{convert::TryFrom, env, fs, io, path::PathBuf};
+use tables::ANG45;
 use wad::{add_default_extension, FileLump, ReadWadExt, WadFileInfo, WadSource};
 
 #[cfg(windows)]
@@ -55,11 +74,13 @@ counted_array!(
     ]
 );
 
+/// Print an error and quit the program.
 pub(crate) fn error<S: AsRef<str>>(why: S) -> ! {
     lprint!(OutputLevel::ERROR, "{}\n", why.as_ref());
     std::process::exit(-1);
 }
 
+/// Read the configuration file, if it is present.
 fn read_configuration() -> Box<Configuration> {
     let mut configuration = Box::<Configuration>::default();
 
@@ -68,10 +89,13 @@ fn read_configuration() -> Box<Configuration> {
     configuration
 }
 
+/// Read command-line arguments and modify the configuration as necessary. This
+/// function can fail if conflicting arguments were provided.
 fn read_args(configuration: &mut Configuration) {
     configuration.args.check_arg_conflicts();
 }
 
+/// Print the version of the program.
 fn print_version() {
     lprint!(OutputLevel::INFO, "{}\n", system::version_string());
 }
@@ -86,6 +110,7 @@ fn main() {
     doom_main(&mut configuration);
 }
 
+/// Initialize the SDL library.
 fn pre_init_graphics() -> sdl2::Sdl {
     match sdl2::init() {
         Ok(sdl) => sdl,
@@ -95,24 +120,26 @@ fn pre_init_graphics() -> sdl2::Sdl {
     }
 }
 
+/// Run some final setup and enter the game loop.
 fn doom_main(configuration: &mut Configuration) {
     doom_main_setup(configuration);
 
     doom_loop();
 }
 
+/// Setup that is required for Doom to run. Contains much argument
+/// handling.
 fn doom_main_setup(configuration: &mut Configuration) {
     setup_console_masks(configuration);
 
     loop {
-        let mut rsp_found = false;
-        for arg in &configuration.args {
-            if arg.starts_with('@') {
-                rsp_found = true;
-            }
-        }
+        // Are there more response files to parse?
+        let rsp_found = configuration.args.iter().any(|arg| arg.starts_with('@'));
+        // This function call removes the first arg starting with @ so that the loop
+        // can terminate.
         find_response_file(configuration);
         if !rsp_found {
+            // All done, or there were no response files to begin with
             break;
         }
     }
@@ -123,10 +150,13 @@ fn doom_main_setup(configuration: &mut Configuration) {
 
     deh::build_bex_tables();
 
+    // make args well-formed by prefixing with -file/-deh/-playdemo
     configuration.args.handle_loose_files();
 
+    // figure out what this IWAD thingy is
     identify_version(configuration);
 
+    // lots of arg handling below, beware!
     configuration.arg_meta.nomonsters = configuration.args.check_parm("-nomonsters").is_some();
     configuration.nomonsters = configuration.arg_meta.nomonsters;
     configuration.arg_meta.respawnparm = configuration.args.check_parm("-respawn").is_some();
@@ -143,6 +173,7 @@ fn doom_main_setup(configuration: &mut Configuration) {
         0
     };
 
+    // set this string, it'll be printed in a minute so it's important
     configuration.doom_ver_str = String::from(match configuration.game_mode {
         GameMode::Retail => match configuration.game_mission {
             GameMission::Chex => "Chex(R) Quest",
@@ -156,13 +187,16 @@ fn doom_main_setup(configuration: &mut Configuration) {
             GameMission::Hacx => "HACX - Twitch 'n Kill",
             _ => "DOOM 2: Hell on Earth",
         },
+        // this IWAD is very weird, so we'll just call it
         _ => "Public DOOM",
     });
 
+    // append BFG edition to shame those who use those IWADs. They probably deserve it.
     if configuration.bfg_edition {
         configuration.doom_ver_str.push_str(" (BFG Edition)");
     }
 
+    // print some information about our program! :)
     lprint!(
         OutputLevel::ALWAYS,
         "{0} (built {1}), playing {2}\n\
@@ -174,10 +208,13 @@ fn doom_main_setup(configuration: &mut Configuration) {
         configuration.doom_ver_str
     );
 
+    // epic developer message, lets you know you got in the mainframe
     if configuration.devparm {
         lprint!(OutputLevel::CONFIRM, "{}", DEVSTR);
     }
 
+    // more nightmarish arg handling. dear god... so many parameters! and none of them
+    // documented!
     let p = match configuration.args.check_parm("-turbo") {
         Some(it) => it,
         _ => configuration.args.len(),
@@ -250,6 +287,7 @@ fn doom_main_setup(configuration: &mut Configuration) {
                 OutputLevel::CONFIRM,
                 "Austin Virtual Gaming: Levels will end after 20 minutes.\n"
             );
+            // FIXME set a variable???
         }
     }
 
@@ -298,6 +336,14 @@ fn doom_main_setup(configuration: &mut Configuration) {
 
     configuration.no_draw = configuration.args.check_parm("-nodraw").is_some();
     configuration.no_blit = configuration.args.check_parm("-noblit").is_some();
+
+    if let Some(p) = configuration.args.check_parm("-viewangle") {
+        if p < configuration.args.len() - 1 {
+            configuration.view_angle_offset = configuration.args[p + 1].parse().unwrap_or(0);
+            configuration.view_angle_offset = num::clamp(configuration.view_angle_offset, 0, 7);
+            configuration.view_angle_offset = (8 - configuration.view_angle_offset) * ANG45 as i32;
+        }
+    }
 }
 
 fn identify_version(configuration: &mut Configuration) {
@@ -779,10 +825,10 @@ fn find_response_file(configuration: &mut Configuration) {
 }
 
 const PRBOOM_DIR: &str = "/.prboom-plus";
-lazy_static! {
-    static ref DOOM_EXE_DIR: RwLock<Option<String>> = RwLock::new(None);
-}
 fn doom_exe_dir() -> String {
+    lazy_static! {
+        static ref DOOM_EXE_DIR: RwLock<Option<String>> = RwLock::new(None);
+    }
     if DOOM_EXE_DIR.read().is_none() {
         let home = std::env::var("HOME").unwrap();
         *DOOM_EXE_DIR.write() = Some(format!("{}/{}", home, PRBOOM_DIR));

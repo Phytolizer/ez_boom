@@ -49,6 +49,8 @@ pub(crate) struct Configuration {
 
     pub(crate) no_draw: bool,
     pub(crate) no_blit: bool,
+
+    pub(crate) view_angle_offset: i32,
 }
 
 impl Default for Configuration {
@@ -87,6 +89,8 @@ impl Default for Configuration {
 
             no_draw: false,
             no_blit: false,
+
+            view_angle_offset: 0,
         }
     }
 }
