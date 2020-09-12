@@ -5,12 +5,17 @@ mod defs;
 mod deh;
 mod doom;
 mod game;
+use game::{FORWARD_MOVE, SIDE_MOVE};
 mod info;
 mod logic;
 
 mod misc;
 use misc::args;
+use misc::args::ARG_META;
 use misc::lprint::OutputLevel;
+
+mod runtime_config;
+use runtime_config::RUNTIME_CONFIG;
 
 mod sounds;
 mod system;
@@ -22,8 +27,12 @@ use faccess::PathExt;
 use lazy_static::lazy_static;
 use parking_lot::RwLock;
 
+use defs::{PACKAGE_NAME, VERSION_DATE};
 use doom::def::{GameMission, GameMode, Language};
-use doom::stat::{GAMEMISSION, GAMEMODE, LANGUAGE};
+use doom::{
+    english::DEVSTR,
+    stat::{GAMEMISSION, GAMEMODE, LANGUAGE},
+};
 use game::HAS_WOLF_LEVELS;
 use io::SeekFrom;
 use std::{env, fs, io, mem, path::PathBuf, slice};
@@ -38,6 +47,8 @@ lazy_static! {
     static ref ARGS: RwLock<Vec<String>> = RwLock::new(vec![]);
     pub static ref FORCE_OLD_BSP: RwLock<bool> = RwLock::new(false);
     static ref SAVE_GAME_BASE: RwLock<String> = RwLock::new(String::new());
+    static ref DOOMVERSTR: RwLock<String> = RwLock::new(String::new());
+    static ref BFGEDITION: RwLock<bool> = RwLock::new(false);
 }
 
 counted_array!(
@@ -93,7 +104,7 @@ fn main() {
 
     let sdl = pre_init_graphics();
 
-    doom_main();
+    doom_main(&mut configuration);
 }
 
 fn pre_init_graphics() -> sdl2::Sdl {
@@ -105,13 +116,13 @@ fn pre_init_graphics() -> sdl2::Sdl {
     }
 }
 
-fn doom_main() {
-    doom_main_setup();
+fn doom_main(configuration: &mut Configuration) {
+    doom_main_setup(configuration);
 
     doom_loop();
 }
 
-fn doom_main_setup() {
+fn doom_main_setup(configuration: &mut Configuration) {
     setup_console_masks();
 
     loop {
@@ -136,6 +147,79 @@ fn doom_main_setup() {
     args::handle_loose_files();
 
     identify_version();
+
+    ARG_META.write().nomonsters = args::check_parm("-nomonsters").is_some();
+    RUNTIME_CONFIG.write().nomonsters = ARG_META.read().nomonsters;
+    ARG_META.write().respawnparm = args::check_parm("-respawn").is_some();
+    RUNTIME_CONFIG.write().respawnparm = ARG_META.read().respawnparm;
+    ARG_META.write().fastparm = args::check_parm("-fast").is_some();
+    RUNTIME_CONFIG.write().fastparm = ARG_META.read().fastparm;
+
+    RUNTIME_CONFIG.write().devparm = args::check_parm("-devparm").is_some();
+    RUNTIME_CONFIG.write().deathmatch = if args::check_parm("-altdeath").is_some() {
+        2
+    } else if args::check_parm("-deathmatch").is_some() {
+        1
+    } else {
+        0
+    };
+
+    *DOOMVERSTR.write() = String::from(match *GAMEMODE.read() {
+        GameMode::Retail => match *GAMEMISSION.read() {
+            GameMission::Chex => "Chex(R) Quest",
+            _ => "The Ultimate DOOM",
+        },
+        GameMode::Shareware => "DOOM Shareware",
+        GameMode::Registered => "DOOM Registered",
+        GameMode::Commercial => match *GAMEMISSION.read() {
+            GameMission::Plutonia => "Final DOOM - The Plutonia Experiment",
+            GameMission::TNT => "Final DOOM - TNT: Evilution",
+            GameMission::Hacx => "HACX - Twitch 'n Kill",
+            _ => "DOOM 2: Hell on Earth",
+        },
+        _ => "Public DOOM",
+    });
+
+    if *BFGEDITION.read() {
+        DOOMVERSTR.write().push_str(" (BFG Edition)");
+    }
+
+    lprint!(
+        OutputLevel::ALWAYS,
+        "{0} (built {1}), playing {2}\n\
+    {0} is released under the GNU General Public license v2.0.\n\
+    You are welcome to redistribute it under certain conditions.\n\
+    It comes with ABSOLUTELY NO WARRANTY.\n",
+        PACKAGE_NAME,
+        VERSION_DATE,
+        *DOOMVERSTR.read()
+    );
+
+    if RUNTIME_CONFIG.read().devparm {
+        lprint!(OutputLevel::CONFIRM, "{}", DEVSTR);
+    }
+
+    let p = match args::check_parm("-turbo") {
+        Some(it) => it,
+        _ => return,
+    };
+    let scale = if p < ARGS.read().len() - 1 {
+        ARGS.read()[p + 1].parse::<i32>().unwrap_or(0)
+    } else {
+        200
+    };
+    let scale = num::clamp(scale, 10, 400);
+
+    lprint!(OutputLevel::CONFIRM, "turbo scale: {}%\n", scale);
+    {
+        let mut forward_move = FORWARD_MOVE.write();
+        *forward_move = [forward_move[0] * scale / 100, forward_move[1] * scale / 100];
+    }
+    {
+        let mut side_move = SIDE_MOVE.write();
+        *side_move = [side_move[0] * scale / 100, side_move[1] * scale / 100];
+    }
+
 }
 
 fn identify_version() {
@@ -211,6 +295,7 @@ fn add_file(file: &str, source: WadSource) {
     if info.name.ends_with("nerve.wad") {
         *GAMEMISSION.write() = GameMission::Nerve;
     }
+    drop(wadfiles);
 
     let gwa_filename = add_default_extension(file, ".wad");
     if gwa_filename.ends_with(".wad") {
@@ -278,7 +363,6 @@ fn check_iwad(iwad: &str) {
     let mut hx = 0;
     // ?
     let mut cq = 0;
-    let mut bfgedition = false;
     while length > 0 {
         length -= 1;
         let lump = &fileinfo[length as usize];
@@ -298,7 +382,7 @@ fn check_iwad(iwad: &str) {
             }
         }
         if &lump.name[0..8] == b"DMENUPIC" {
-            bfgedition = true;
+            *BFGEDITION.write() = true;
         }
         if &lump.name[0..4] == b"HACX" {
             hx += 1;
@@ -308,7 +392,7 @@ fn check_iwad(iwad: &str) {
         }
     }
 
-    if noiwad && !bfgedition && cq < 2 {
+    if noiwad && !*BFGEDITION.read() && cq < 2 {
         error(format!("check_iwad: IWAD tag not present for {}", iwad));
     }
 

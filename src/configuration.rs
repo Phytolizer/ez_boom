@@ -4,7 +4,8 @@ use bounded_integer::bounded_integer;
 use num::clamp;
 use std::ops;
 
-pub struct Configuration {}
+#[derive(Debug)]
+pub(crate) struct Configuration {}
 
 impl Default for Configuration {
     fn default() -> Self {

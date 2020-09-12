@@ -1,4 +1,6 @@
 use crate::ARGS;
+use lazy_static::lazy_static;
+use parking_lot::RwLock;
 
 const PARM_RECORD: &str = "-record";
 const PARM_RECORDFROM: &str = "-recordfrom";
@@ -8,7 +10,31 @@ const PARM_PLAYDEMO: &str = "-playdemo";
 const PARM_TIMEDEMO: &str = "-timedemo";
 const PARM_FASTDEMO: &str = "-fastdemo";
 
-pub fn check_parm(check: &str) -> Option<usize> {
+/**
+Information about which args were passed on the command line.
+Related to but not identical to RuntimeConfig.
+**/
+pub(crate) struct ArgMeta {
+    pub(crate) nomonsters: bool,
+    pub(crate) respawnparm: bool,
+    pub(crate) fastparm: bool,
+}
+
+impl Default for ArgMeta {
+    fn default() -> Self {
+        Self {
+            nomonsters: false,
+            respawnparm: false,
+            fastparm: false,
+        }
+    }
+}
+
+lazy_static! {
+    pub(crate) static ref ARG_META: RwLock<ArgMeta> = RwLock::new(ArgMeta::default());
+}
+
+pub(crate) fn check_parm(check: &str) -> Option<usize> {
     let args = crate::ARGS.read();
     let mut i = args.len() - 1;
     loop {
