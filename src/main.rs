@@ -1,5 +1,6 @@
 mod configuration;
-use configuration::Configuration;
+use args::ArgList;
+use configuration::{Configuration, SkillLevel};
 
 mod defs;
 mod deh;
@@ -11,11 +12,7 @@ mod logic;
 
 mod misc;
 use misc::args;
-use misc::args::ARG_META;
 use misc::lprint::OutputLevel;
-
-mod runtime_config;
-use runtime_config::RUNTIME_CONFIG;
 
 mod sounds;
 mod system;
@@ -29,27 +26,15 @@ use parking_lot::RwLock;
 
 use defs::{PACKAGE_NAME, VERSION_DATE};
 use doom::def::{GameMission, GameMode, Language};
-use doom::{
-    english::DEVSTR,
-    stat::{GAMEMISSION, GAMEMODE, LANGUAGE},
-};
-use game::HAS_WOLF_LEVELS;
+use doom::english::DEVSTR;
 use io::SeekFrom;
-use std::{env, fs, io, mem, path::PathBuf, slice};
-use wad::{add_default_extension, FileLump, ReadWadExt, WadFileInfo, WadSource, WADFILES};
+use std::{convert::TryFrom, env, fs, io, path::PathBuf};
+use wad::{add_default_extension, FileLump, ReadWadExt, WadFileInfo, WadSource};
 
 #[cfg(windows)]
 const PATH_SEPARATOR: char = ';';
 #[cfg(not(windows))]
 const PATH_SEPARATOR: char = ':';
-
-lazy_static! {
-    static ref ARGS: RwLock<Vec<String>> = RwLock::new(vec![]);
-    pub static ref FORCE_OLD_BSP: RwLock<bool> = RwLock::new(false);
-    static ref SAVE_GAME_BASE: RwLock<String> = RwLock::new(String::new());
-    static ref DOOMVERSTR: RwLock<String> = RwLock::new(String::new());
-    static ref BFGEDITION: RwLock<bool> = RwLock::new(false);
-}
 
 counted_array!(
     const STANDARD_IWADS: [&str; _] = [
@@ -70,17 +55,13 @@ counted_array!(
     ]
 );
 
-fn init_statics() {
-    *ARGS.write() = env::args().collect();
-}
-
 pub(crate) fn error<S: AsRef<str>>(why: S) -> ! {
     lprint!(OutputLevel::ERROR, "{}\n", why.as_ref());
     std::process::exit(-1);
 }
 
-fn read_configuration() -> Configuration {
-    let mut configuration = Configuration::default();
+fn read_configuration() -> Box<Configuration> {
+    let mut configuration = Box::<Configuration>::default();
 
     // TODO
 
@@ -88,7 +69,7 @@ fn read_configuration() -> Configuration {
 }
 
 fn read_args(configuration: &mut Configuration) {
-    args::check_arg_conflicts();
+    configuration.args.check_arg_conflicts();
 }
 
 fn print_version() {
@@ -96,8 +77,6 @@ fn print_version() {
 }
 
 fn main() {
-    init_statics();
-
     let mut configuration = read_configuration();
     read_args(&mut configuration);
     print_version();
@@ -123,55 +102,55 @@ fn doom_main(configuration: &mut Configuration) {
 }
 
 fn doom_main_setup(configuration: &mut Configuration) {
-    setup_console_masks();
+    setup_console_masks(configuration);
 
     loop {
         let mut rsp_found = false;
-        for arg in &*ARGS.read() {
+        for arg in &configuration.args {
             if arg.starts_with('@') {
                 rsp_found = true;
             }
         }
-        find_response_file();
+        find_response_file(configuration);
         if !rsp_found {
             break;
         }
     }
 
-    if args::check_parm("-forceoldbsp").is_some() {
-        *FORCE_OLD_BSP.write() = true;
+    if configuration.args.check_parm("-forceoldbsp").is_some() {
+        configuration.force_old_bsp = true;
     }
 
     deh::build_bex_tables();
 
-    args::handle_loose_files();
+    configuration.args.handle_loose_files();
 
-    identify_version();
+    identify_version(configuration);
 
-    ARG_META.write().nomonsters = args::check_parm("-nomonsters").is_some();
-    RUNTIME_CONFIG.write().nomonsters = ARG_META.read().nomonsters;
-    ARG_META.write().respawnparm = args::check_parm("-respawn").is_some();
-    RUNTIME_CONFIG.write().respawnparm = ARG_META.read().respawnparm;
-    ARG_META.write().fastparm = args::check_parm("-fast").is_some();
-    RUNTIME_CONFIG.write().fastparm = ARG_META.read().fastparm;
+    configuration.arg_meta.nomonsters = configuration.args.check_parm("-nomonsters").is_some();
+    configuration.nomonsters = configuration.arg_meta.nomonsters;
+    configuration.arg_meta.respawnparm = configuration.args.check_parm("-respawn").is_some();
+    configuration.respawnparm = configuration.arg_meta.respawnparm;
+    configuration.arg_meta.fastparm = configuration.args.check_parm("-fast").is_some();
+    configuration.fastparm = configuration.arg_meta.fastparm;
 
-    RUNTIME_CONFIG.write().devparm = args::check_parm("-devparm").is_some();
-    RUNTIME_CONFIG.write().deathmatch = if args::check_parm("-altdeath").is_some() {
+    configuration.devparm = configuration.args.check_parm("-devparm").is_some();
+    configuration.deathmatch = if configuration.args.check_parm("-altdeath").is_some() {
         2
-    } else if args::check_parm("-deathmatch").is_some() {
+    } else if configuration.args.check_parm("-deathmatch").is_some() {
         1
     } else {
         0
     };
 
-    *DOOMVERSTR.write() = String::from(match *GAMEMODE.read() {
-        GameMode::Retail => match *GAMEMISSION.read() {
+    configuration.doom_ver_str = String::from(match configuration.game_mode {
+        GameMode::Retail => match configuration.game_mission {
             GameMission::Chex => "Chex(R) Quest",
             _ => "The Ultimate DOOM",
         },
         GameMode::Shareware => "DOOM Shareware",
         GameMode::Registered => "DOOM Registered",
-        GameMode::Commercial => match *GAMEMISSION.read() {
+        GameMode::Commercial => match configuration.game_mission {
             GameMission::Plutonia => "Final DOOM - The Plutonia Experiment",
             GameMission::TNT => "Final DOOM - TNT: Evilution",
             GameMission::Hacx => "HACX - Twitch 'n Kill",
@@ -180,8 +159,8 @@ fn doom_main_setup(configuration: &mut Configuration) {
         _ => "Public DOOM",
     });
 
-    if *BFGEDITION.read() {
-        DOOMVERSTR.write().push_str(" (BFG Edition)");
+    if configuration.bfg_edition {
+        configuration.doom_ver_str.push_str(" (BFG Edition)");
     }
 
     lprint!(
@@ -192,19 +171,19 @@ fn doom_main_setup(configuration: &mut Configuration) {
     It comes with ABSOLUTELY NO WARRANTY.\n",
         PACKAGE_NAME,
         VERSION_DATE,
-        *DOOMVERSTR.read()
+        configuration.doom_ver_str
     );
 
-    if RUNTIME_CONFIG.read().devparm {
+    if configuration.devparm {
         lprint!(OutputLevel::CONFIRM, "{}", DEVSTR);
     }
 
-    let p = match args::check_parm("-turbo") {
+    let p = match configuration.args.check_parm("-turbo") {
         Some(it) => it,
         _ => return,
     };
-    let scale = if p < ARGS.read().len() - 1 {
-        ARGS.read()[p + 1].parse::<i32>().unwrap_or(0)
+    let scale = if p < configuration.args.len() - 1 {
+        configuration.args[p + 1].parse::<i32>().unwrap_or(0)
     } else {
         200
     };
@@ -220,42 +199,48 @@ fn doom_main_setup(configuration: &mut Configuration) {
         *side_move = [side_move[0] * scale / 100, side_move[1] * scale / 100];
     }
 
+    if let Some(p) = configuration.args.check_parm("-skill") {
+        if p < configuration.args.len() - 1 {
+            configuration.start_skill =
+                SkillLevel::try_from(configuration.args[p + 1].as_bytes()[0] - b'1')
+                    .unwrap_or_else(|e| error(e));
+        }
+    }
 }
 
-fn identify_version() {
-    *SAVE_GAME_BASE.write() = env::var("DOOMSAVEDIR").unwrap_or_else(|_| doom_exe_dir());
-    if let Some(i) = args::check_parm("-save") {
-        if i < ARGS.read().len() - 1 {
-            let path = &ARGS.read()[i + 1];
+fn identify_version(configuration: &mut Configuration) {
+    configuration.save_game_base =
+        PathBuf::from(env::var("DOOMSAVEDIR").unwrap_or_else(|_| doom_exe_dir()));
+    if let Some(i) = configuration.args.check_parm("-save") {
+        if i < configuration.args.len() - 1 {
+            let path = &configuration.args[i + 1];
             if let Ok(true) = fs::metadata(path).map(|m| m.is_dir()) {
-                *SAVE_GAME_BASE.write() = path.clone();
+                configuration.save_game_base = PathBuf::from(path);
             } else {
                 lprint!(
                     OutputLevel::ERROR,
                     "Error: -save path does not exist. Using {} instead\n",
-                    SAVE_GAME_BASE.read()
+                    configuration.save_game_base.to_str().unwrap()
                 );
             }
         }
     }
-    normalize_slashes(&mut *SAVE_GAME_BASE.write());
-
-    let iwad = find_iwad_file();
+    let iwad = find_iwad_file(configuration);
 
     if let Some(iwad) = iwad {
-        add_iwad(&iwad);
+        add_iwad(configuration, &iwad);
     } else {
         error("identify_version: IWAD not found\n");
     }
 }
 
-fn add_iwad(iwad: &str) {
+fn add_iwad(configuration: &mut Configuration, iwad: &str) {
     lprint!(OutputLevel::CONFIRM, "IWAD found: {}\n", iwad);
-    check_iwad(iwad);
+    check_iwad(configuration, iwad);
 
-    match *GAMEMODE.read() {
+    match configuration.game_mode {
         GameMode::Retail | GameMode::Registered | GameMode::Shareware => {
-            *GAMEMISSION.write() = if iwad.ends_with("chex.wad") {
+            configuration.game_mission = if iwad.ends_with("chex.wad") {
                 GameMission::Chex
             } else {
                 GameMission::Doom
@@ -263,10 +248,10 @@ fn add_iwad(iwad: &str) {
         }
         GameMode::Commercial => {
             if iwad.ends_with("doom2f.wad") {
-                *LANGUAGE.write() = Language::French;
+                configuration.language = Language::French;
             }
 
-            *GAMEMISSION.write() = if iwad.ends_with("tnt.wad") {
+            configuration.game_mission = if iwad.ends_with("tnt.wad") {
                 GameMission::TNT
             } else if iwad.ends_with("plutonia.wad") {
                 GameMission::Plutonia
@@ -280,22 +265,20 @@ fn add_iwad(iwad: &str) {
             lprint!(OutputLevel::WARN, "Unknown game version, may not work\n");
         }
     }
-    add_file(iwad, WadSource::Iwad);
+    add_file(configuration, iwad, WadSource::Iwad);
 }
 
-fn add_file(file: &str, source: WadSource) {
-    WADFILES.write().push(WadFileInfo {
-        name: add_default_extension(file, ".wad"),
+fn add_file(configuration: &mut Configuration, file: &str, source: WadSource) {
+    configuration.wad_files.push(WadFileInfo {
+        name: PathBuf::from(add_default_extension(file, ".wad")),
         src: source,
         handle: 0,
     });
 
-    let wadfiles = WADFILES.read();
-    let info = wadfiles.iter().last().unwrap();
+    let info = configuration.wad_files.iter().last().unwrap();
     if info.name.ends_with("nerve.wad") {
-        *GAMEMISSION.write() = GameMission::Nerve;
+        configuration.game_mission = GameMission::Nerve;
     }
-    drop(wadfiles);
 
     let gwa_filename = add_default_extension(file, ".wad");
     if gwa_filename.ends_with(".wad") {
@@ -306,15 +289,15 @@ fn add_file(file: &str, source: WadSource) {
         gwa_filename[n - 1] = b'a';
         let gwa_filename = String::from_utf8(gwa_filename).unwrap();
 
-        WADFILES.write().push(WadFileInfo {
-            name: gwa_filename,
+        configuration.wad_files.push(WadFileInfo {
+            name: PathBuf::from(gwa_filename),
             src: source,
             handle: 0,
         });
     }
 }
 
-fn check_iwad(iwad: &str) {
+fn check_iwad(configuration: &mut Configuration, iwad: &str) {
     use std::io::Seek;
 
     if PathBuf::from(iwad)
@@ -350,17 +333,17 @@ fn check_iwad(iwad: &str) {
 
     let mut length = header.numlumps;
     // Ultimate Doom
-    let mut ud = 0;
+    let mut ultdoom_levels = 0;
     // Doom Registered
-    let mut rg = 0;
+    let mut registered_levels = 0;
     // Doom Shareware
-    let mut sw = 0;
+    let mut shareware_levels = 0;
     // Doom II ("commmercial")
-    let mut cm = 0;
+    let mut commercial_levels = 0;
     // Secret level
-    let mut sc = 0;
+    let mut secret_levels = 0;
     // Hacx
-    let mut hx = 0;
+    let mut hacx_levels = 0;
     // ?
     let mut cq = 0;
     while length > 0 {
@@ -369,52 +352,54 @@ fn check_iwad(iwad: &str) {
         if lump.name[0] == b'E' && lump.name[2] == b'M' && lump.name[4] == b'\0' {
             // ExMy
             match lump.name[1] {
-                b'4' => ud += 1,
-                b'3' => rg += 1,
-                b'2' => rg += 1,
-                b'1' => sw += 1,
+                b'4' => ultdoom_levels += 1,
+                b'3' => registered_levels += 1,
+                b'2' => registered_levels += 1,
+                b'1' => shareware_levels += 1,
                 _ => {}
             }
         } else if &lump.name[0..3] == b"MAP" && lump.name[5] == b'\0' {
-            cm += 1;
-            if lump.name[3] == b'3' && (lump.name[4] == b'1' || lump.name[4] == b'2') {
-                sc += 1;
+            commercial_levels += 1;
+            let level_num = &lump.name[3..5];
+            if level_num == b"31" || level_num == b"32" {
+                secret_levels += 1;
             }
         }
         if &lump.name[0..8] == b"DMENUPIC" {
-            *BFGEDITION.write() = true;
+            configuration.bfg_edition = true;
         }
         if &lump.name[0..4] == b"HACX" {
-            hx += 1;
+            hacx_levels += 1;
         }
         if &lump.name[0..5] == b"W94_1" || &lump.name[0..8] == b"POSSHOM0" {
             cq += 1;
         }
     }
 
-    if noiwad && !*BFGEDITION.read() && cq < 2 {
+    if noiwad && !configuration.bfg_edition && cq < 2 {
         error(format!("check_iwad: IWAD tag not present for {}", iwad));
     }
 
-    *GAMEMODE.write() = GameMode::TBD;
-    *HAS_WOLF_LEVELS.write() = false;
-    if cm >= 30 || (cm >= 20 && hx > 0) {
-        *GAMEMODE.write() = GameMode::Commercial;
-        *HAS_WOLF_LEVELS.write() = sc >= 2;
-    } else if ud >= 9 {
-        *GAMEMODE.write() = GameMode::Retail;
-    } else if rg >= 18 {
-        *GAMEMODE.write() = GameMode::Registered;
-    } else if sw >= 9 {
-        *GAMEMODE.write() = GameMode::Shareware;
-    }
+    configuration.game_mode =
+        if commercial_levels >= 30 || (commercial_levels >= 20 && hacx_levels > 0) {
+            configuration.has_wolf_levels = secret_levels >= 2;
+            GameMode::Commercial
+        } else if ultdoom_levels >= 9 {
+            GameMode::Retail
+        } else if registered_levels >= 18 {
+            GameMode::Registered
+        } else if shareware_levels >= 9 {
+            GameMode::Shareware
+        } else {
+            GameMode::TBD
+        };
 }
 
-fn find_iwad_file() -> Option<String> {
-    if let Some(mut i) = args::check_parm("-iwad") {
+fn find_iwad_file(configuration: &Configuration) -> Option<String> {
+    if let Some(mut i) = configuration.args.check_parm("-iwad") {
         i += 1;
-        if i < ARGS.read().len() {
-            return find_file(&ARGS.read()[i], ".wad");
+        if i < configuration.args.len() {
+            return find_file(&configuration.args[i], ".wad");
         }
     }
     let mut iwad: Option<String> = None;
@@ -524,19 +509,18 @@ fn find_file_internal(name: &str, ext: &str, is_static: bool) -> Option<String> 
 
     for path in &*SEARCH.read() {
         let path: &SearchPath = path;
-        let mut d = Some(String::new());
-        if let Some(ref var) = path.env_var {
+        let d = if let Some(ref var) = path.env_var {
             match env::var(var) {
-                Ok(v) => d = Some(v),
+                Ok(v) => Some(v),
                 Err(_) => continue,
             }
         } else if let Some(func) = path.func {
-            d = Some(func());
+            Some(func())
         } else if let Some(ref abs) = path.absolute_dir {
-            d = Some(abs.clone());
+            Some(abs.clone())
         } else {
-            d = None;
-        }
+            None
+        };
 
         let s = path.subdir.clone();
         let dynamic_p = RwLock::new(String::new());
@@ -592,14 +576,14 @@ fn normalize_slashes(path: &mut String) {
         .to_string();
 }
 
-fn setup_console_masks() {
+fn setup_console_masks(configuration: &Configuration) {
     let cena = "ICWEFDA";
-    if let Some(mut p) = args::check_parm("-cout") {
+    if let Some(mut p) = configuration.args.check_parm("-cout") {
         lprint!(OutputLevel::DEBUG, "mask for stdout console output: ");
         p += 1;
-        if p != ARGS.read().len() && !ARGS.read()[p].starts_with('-') {
+        if p != configuration.args.len() && !configuration.args[p].starts_with('-') {
             *misc::lprint::OUTPUT_MASK.write() = OutputLevel::NONE;
-            for c in ARGS.read()[p].chars() {
+            for c in configuration.args[p].chars() {
                 let c = c.to_ascii_uppercase();
                 if cena.contains(c) {
                     let pos = cena.find(c).unwrap();
@@ -610,12 +594,12 @@ fn setup_console_masks() {
         }
         lprint!(OutputLevel::DEBUG, "\n");
     }
-    if let Some(mut p) = args::check_parm("-cerr") {
+    if let Some(mut p) = configuration.args.check_parm("-cerr") {
         lprint!(OutputLevel::DEBUG, "mask for stderr console output: ");
         p += 1;
-        if p != ARGS.read().len() && !ARGS.read()[p].starts_with('-') {
+        if p != configuration.args.len() && !configuration.args[p].starts_with('-') {
             *misc::lprint::ERROR_MASK.write() = OutputLevel::NONE;
-            for c in ARGS.read()[p].chars() {
+            for c in configuration.args[p].chars() {
                 let c = c.to_ascii_uppercase();
                 if cena.contains(c) {
                     let pos = cena.find(c).unwrap();
@@ -628,8 +612,8 @@ fn setup_console_masks() {
     }
 }
 
-fn find_response_file() {
-    for (i, arg) in ARGS.read().iter().enumerate() {
+fn find_response_file(configuration: &mut Configuration) {
+    for (i, arg) in configuration.args.iter().enumerate() {
         if arg.starts_with('@') {
             let mut fname = format!("{}.rsp", &arg[1..]);
             let file_contents = misc::read_file(&fname);
@@ -645,12 +629,12 @@ fn find_response_file() {
             if file_contents.is_empty() {
                 lprint!(OutputLevel::ERROR, "\nResponse file empty!\n");
 
-                ARGS.write().remove(i);
+                configuration.args.remove(i);
                 return;
             }
 
-            let mut moreargs = Vec::from(&ARGS.read()[i + 1..]);
-            let mut newargv = vec![ARGS.read()[0].clone()];
+            let mut moreargs = Vec::from(&configuration.args[i + 1..]);
+            let mut newargv = vec![configuration.args[0].clone()];
 
             let mut indexinfile = 1;
             let mut size = file_contents.len();
@@ -687,14 +671,14 @@ fn find_response_file() {
 
             newargv.append(&mut moreargs);
 
-            *ARGS.write() = newargv;
+            configuration.args = newargv;
 
             lprint!(
                 OutputLevel::CONFIRM,
                 "{} command-line args:\n",
-                ARGS.read().len()
+                configuration.args.len()
             );
-            for arg in &*ARGS.read() {
+            for arg in &configuration.args {
                 lprint!(OutputLevel::CONFIRM, "{}\n", arg);
             }
             break;

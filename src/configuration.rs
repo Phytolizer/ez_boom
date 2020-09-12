@@ -2,14 +2,73 @@
 
 use bounded_integer::bounded_integer;
 use num::clamp;
-use std::ops;
+use std::{convert::TryFrom, env, ops, path::PathBuf};
+
+use crate::{
+    doom::def::GameMission,
+    doom::def::GameMode,
+    doom::def::Language,
+    misc::args::{ArgMeta, Args},
+wad::WadFileInfo};
 
 #[derive(Debug)]
-pub(crate) struct Configuration {}
+pub(crate) struct Configuration {
+    pub(crate) args: Args,
+    pub(crate) arg_meta: ArgMeta,
+    pub(crate) nomonsters: bool,
+    pub(crate) respawnparm: bool,
+    pub(crate) fastparm: bool,
+    pub(crate) devparm: bool,
+
+    // can also be 2
+    pub(crate) deathmatch: usize,
+    pub(crate) force_old_bsp: bool,
+
+    pub(crate) game_mode: GameMode,
+    pub(crate) game_mission: GameMission,
+    pub(crate) language: Language,
+
+    pub(crate) doom_ver_str: String,
+    pub(crate) bfg_edition: bool,
+    pub(crate) has_wolf_levels: bool,
+
+    pub(crate) save_game_base: PathBuf,
+    pub(crate) start_skill: SkillLevel,
+    pub(crate) start_episode: usize,
+    pub(crate) start_map: usize,
+    pub(crate) autostart: bool,
+
+    pub(crate) wad_files: Vec<WadFileInfo>,
+}
 
 impl Default for Configuration {
     fn default() -> Self {
-        Configuration {}
+        Configuration {
+            args: env::args().collect(),
+            arg_meta: ArgMeta::default(),
+            nomonsters: false,
+            respawnparm: false,
+            fastparm: false,
+            devparm: false,
+            deathmatch: 0,
+            force_old_bsp: false,
+
+            game_mode: GameMode::TBD,
+            game_mission: GameMission::None,
+            language: Language::English,
+
+            doom_ver_str: String::new(),
+            bfg_edition: false,
+            has_wolf_levels: false,
+
+            save_game_base: PathBuf::new(),
+            start_skill: SkillLevel::None,
+            start_episode: 1,
+            start_map: 1,
+            autostart: false,
+
+            wad_files: vec![],
+        }
     }
 }
 
@@ -68,12 +127,29 @@ bounded_integer! {
     pub struct WeaponAttackAlignment { 0..=3 }
 }
 
+#[derive(Debug)]
 pub enum SkillLevel {
+    None,
     Itytd,
     Hntr,
     Hmp,
     Uv,
     Nm,
+}
+
+impl TryFrom<u8> for SkillLevel {
+    type Error = String;
+
+    fn try_from(value: u8) -> Result<Self, Self::Error> {
+        match value {
+            0 => Ok(SkillLevel::Itytd),
+            1 => Ok(SkillLevel::Hntr),
+            2 => Ok(SkillLevel::Hmp),
+            3 => Ok(SkillLevel::Uv),
+            4 => Ok(SkillLevel::Nm),
+            _ => Err(format!("Invalid skill level {}", value)),
+        }
+    }
 }
 
 pub enum MonsterInfightingLevel {

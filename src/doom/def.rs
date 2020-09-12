@@ -21,6 +21,7 @@ pub(crate) enum GameMission {
     None,
 }
 
+#[allow(dead_code)]
 #[derive(Debug)]
 pub(crate) enum Language {
     English,

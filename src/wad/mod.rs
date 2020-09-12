@@ -1,12 +1,6 @@
 use byteorder::{LittleEndian, ReadBytesExt};
 use io::Read;
-use lazy_static::lazy_static;
-use parking_lot::RwLock;
-use std::{io, mem};
-
-lazy_static! {
-    pub(crate) static ref WADFILES: RwLock<Vec<WadFileInfo>> = RwLock::new(vec![]);
-}
+use std::{io, mem, path::PathBuf};
 
 #[derive(Debug)]
 pub(crate) struct WadInfo {
@@ -17,7 +11,7 @@ pub(crate) struct WadInfo {
 
 #[derive(Debug)]
 pub(crate) struct WadFileInfo {
-    pub(crate) name: String,
+    pub(crate) name: PathBuf,
     pub(crate) src: WadSource,
     pub(crate) handle: i32,
 }
@@ -58,6 +52,7 @@ where
     }
 }
 
+#[allow(dead_code)]
 #[derive(Debug, Copy, Clone)]
 pub(crate) enum WadSource {
     Iwad = 0,
