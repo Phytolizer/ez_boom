@@ -342,6 +342,8 @@ fn doom_main_setup(configuration: &mut Configuration) {
             configuration.view_angle_offset = (8 - configuration.view_angle_offset) * ANG45 as i32;
         }
     }
+
+    game::reload_defaults(configuration);
 }
 
 fn identify_version(configuration: &mut Configuration) {

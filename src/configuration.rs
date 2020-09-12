@@ -51,6 +51,19 @@ pub(crate) struct Configuration {
     pub(crate) no_blit: bool,
 
     pub(crate) view_angle_offset: i32,
+
+    pub(crate) weapon_recoil: ConfigValue,
+    pub(crate) player_bobbing: ConfigValue,
+    pub(crate) variable_friction: ConfigValue,
+}
+
+macro_rules! config_value {
+    ($ty:tt, $default:expr) => {
+        ConfigValue {
+            value: ConfigValueEnum::$ty($default),
+            default_value: ConfigValueEnum::$ty($default),
+        }
+    };
 }
 
 impl Default for Configuration {
@@ -91,8 +104,39 @@ impl Default for Configuration {
             no_blit: false,
 
             view_angle_offset: 0,
+
+            weapon_recoil: config_value!(Bool, false),
+            player_bobbing: config_value!(Bool, true),
+            variable_friction: config_value!(Bool, true),
         }
     }
+}
+
+#[derive(Debug)]
+pub(crate) struct ConfigValue {
+    pub(crate) value: ConfigValueEnum,
+    pub(crate) default_value: ConfigValueEnum,
+}
+
+impl ConfigValue {
+    pub(crate) fn reload_default(&mut self) {
+        self.value = self.default_value.clone();
+    }
+}
+
+impl ConfigValueEnum {
+    fn as_bool(&self) -> bool {
+        use ConfigValueEnum::*;
+        match self {
+            Bool(b) => *b,
+            _ => panic!("not a bool"),
+        }
+    }
+}
+
+#[derive(Debug, Clone)]
+pub(crate) enum ConfigValueEnum {
+    Bool(bool),
 }
 
 pub enum CompatibilityLevel {
