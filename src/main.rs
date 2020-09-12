@@ -215,26 +215,24 @@ fn doom_main_setup(configuration: &mut Configuration) {
 
     // more nightmarish arg handling. dear god... so many parameters! and none of them
     // documented!
-    let p = match configuration.args.check_parm("-turbo") {
-        Some(it) => it,
-        _ => configuration.args.len(),
-    };
-    let scale = if p < configuration.args.len() - 1 {
-        configuration.args[p + 1].parse::<i32>().unwrap_or(0)
-    } else {
-        200
-    };
-    let scale = num::clamp(scale, 10, 400);
+    if let Some(p) = configuration.args.check_parm("-turbo") {
+        let scale = if p < configuration.args.len() - 1 {
+            configuration.args[p + 1].parse::<i32>().unwrap_or(0)
+        } else {
+            200
+        };
+        let scale = num::clamp(scale, 10, 400);
 
-    lprint!(OutputLevel::CONFIRM, "Turbo scale: {}%.\n", scale);
-    configuration.forward_move = [
-        configuration.forward_move[0] * scale / 100,
-        configuration.forward_move[1] * scale / 100,
-    ];
-    configuration.side_move = [
-        configuration.side_move[0] * scale / 100,
-        configuration.side_move[1] * scale / 100,
-    ];
+        lprint!(OutputLevel::CONFIRM, "Turbo scale: {}%.\n", scale);
+        configuration.forward_move = [
+            configuration.forward_move[0] * scale / 100,
+            configuration.forward_move[1] * scale / 100,
+        ];
+        configuration.side_move = [
+            configuration.side_move[0] * scale / 100,
+            configuration.side_move[1] * scale / 100,
+        ];
+    }
 
     if let Some(p) = configuration.args.check_parm("-skill") {
         if p < configuration.args.len() - 1 {
