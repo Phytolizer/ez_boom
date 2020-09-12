@@ -6,7 +6,6 @@ mod defs;
 mod deh;
 mod doom;
 mod game;
-use game::{FORWARD_MOVE, SIDE_MOVE};
 mod info;
 mod logic;
 
@@ -190,14 +189,14 @@ fn doom_main_setup(configuration: &mut Configuration) {
     let scale = num::clamp(scale, 10, 400);
 
     lprint!(OutputLevel::CONFIRM, "turbo scale: {}%\n", scale);
-    {
-        let mut forward_move = FORWARD_MOVE.write();
-        *forward_move = [forward_move[0] * scale / 100, forward_move[1] * scale / 100];
-    }
-    {
-        let mut side_move = SIDE_MOVE.write();
-        *side_move = [side_move[0] * scale / 100, side_move[1] * scale / 100];
-    }
+    configuration.forward_move = [
+        configuration.forward_move[0] * scale / 100,
+        configuration.forward_move[1] * scale / 100,
+    ];
+    configuration.side_move = [
+        configuration.side_move[0] * scale / 100,
+        configuration.side_move[1] * scale / 100,
+    ];
 
     if let Some(p) = configuration.args.check_parm("-skill") {
         if p < configuration.args.len() - 1 {

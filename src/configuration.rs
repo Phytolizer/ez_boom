@@ -9,7 +9,8 @@ use crate::{
     doom::def::GameMode,
     doom::def::Language,
     misc::args::{ArgMeta, Args},
-wad::WadFileInfo};
+    wad::WadFileInfo,
+};
 
 #[derive(Debug)]
 pub(crate) struct Configuration {
@@ -39,6 +40,9 @@ pub(crate) struct Configuration {
     pub(crate) autostart: bool,
 
     pub(crate) wad_files: Vec<WadFileInfo>,
+
+    pub(crate) forward_move: [i32; 2],
+    pub(crate) side_move: [i32; 2],
 }
 
 impl Default for Configuration {
@@ -68,6 +72,9 @@ impl Default for Configuration {
             autostart: false,
 
             wad_files: vec![],
+
+            forward_move: [0x19, 0x32],
+            side_move: [0x18, 0x28],
         }
     }
 }
