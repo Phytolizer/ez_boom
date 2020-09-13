@@ -25,7 +25,8 @@ bitflags! {
 
 lazy_static! {
     pub(crate) static ref OUTPUT_MASK: RwLock<OutputLevel> = RwLock::new(OutputLevel::ALL);
-    pub(crate) static ref ERROR_MASK: RwLock<OutputLevel> = RwLock::new(OutputLevel::ALL & !OutputLevel::INFO);
+    pub(crate) static ref ERROR_MASK: RwLock<OutputLevel> =
+        RwLock::new(OutputLevel::ALL & !OutputLevel::INFO);
 }
 
 #[macro_export]
