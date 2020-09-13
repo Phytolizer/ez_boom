@@ -1,6 +1,8 @@
+use crate::configuration::ProcessPriority;
 use crate::lprint;
 use crate::misc::lprint::OutputLevel;
 use regex::bytes::Regex;
+use std::str::FromStr;
 use std::{
     fs,
     fs::File,
@@ -11,7 +13,8 @@ use std::{
 
 use args::ArgList;
 
-use crate::configuration::{Configuration, Defaults};
+use crate::configuration::{self, Configuration, Defaults, PositiveInt};
+use configuration::CompatibilityLevel;
 
 pub(crate) mod args;
 pub(crate) mod fixed;
@@ -25,6 +28,87 @@ pub fn read_file<P: AsRef<Path>>(file_name: P) -> Result<Vec<u8>, io::Error> {
         f.read_to_end(&mut buf)?;
         Ok(buf)
     })
+}
+
+#[derive(Debug)]
+pub enum ConfigParam {
+    String(Vec<u8>),
+    Integer(i32),
+    EnumVariant(String),
+    Bool(bool),
+    Array(Vec<u8>),
+}
+
+impl ConfigParam {
+    pub fn is_string(&self) -> bool {
+        match self {
+            Self::String(_) => true,
+            _ => false,
+        }
+    }
+
+    pub fn is_integer(&self) -> bool {
+        match self {
+            Self::Integer(_) => true,
+            _ => false,
+        }
+    }
+
+    pub fn is_enum_variant(&self) -> bool {
+        match self {
+            Self::EnumVariant(_) => true,
+            _ => false,
+        }
+    }
+
+    pub fn is_bool(&self) -> bool {
+        match self {
+            Self::Bool(_) => true,
+            _ => false,
+        }
+    }
+
+    pub fn is_array(&self) -> bool {
+        match self {
+            Self::Array(_) => true,
+            _ => false,
+        }
+    }
+
+    pub fn as_string(&self) -> &Vec<u8> {
+        match self {
+            Self::String(s) => s,
+            _ => panic!("not a string"),
+        }
+    }
+
+    pub fn as_integer(&self) -> i32 {
+        match self {
+            Self::Integer(i) => *i,
+            _ => panic!("not an integer"),
+        }
+    }
+
+    pub fn as_enum_variant(&self) -> &String {
+        match self {
+            Self::EnumVariant(v) => v,
+            _ => panic!("not an enum variant"),
+        }
+    }
+
+    pub fn as_bool(&self) -> bool {
+        match self {
+            Self::Bool(b) => *b,
+            _ => panic!("not a bool"),
+        }
+    }
+
+    pub fn as_array(&self) -> &Vec<u8> {
+        match self {
+            Self::Array(a) => a,
+            _ => panic!("not an array"),
+        }
+    }
 }
 
 pub(crate) fn load_defaults(configuration: &mut Configuration) {
@@ -46,15 +130,6 @@ pub(crate) fn load_defaults(configuration: &mut Configuration) {
     // if let Ok(f) = fs::File::create(&configuration.default_file) {
     //     serde_yaml::to_writer(f, &defaults).unwrap();
     // }
-
-    #[derive(Debug)]
-    enum ConfigParam {
-        String(Vec<u8>),
-        Integer(i32),
-        EnumVariant(String),
-        Bool(bool),
-        Array(Vec<u8>),
-    }
 
     if let Ok(f) = fs::File::open(&configuration.default_file) {
         let config_param_regex = Regex::new(r#"^\s*(\S+)\s+(\S+|"(?:.+)")\s*$"#).unwrap();
@@ -137,8 +212,55 @@ pub(crate) fn load_defaults(configuration: &mut Configuration) {
                     };
 
                     dbg!(&parm);
+                    let def = String::from_utf8_lossy(def.as_bytes()).to_string();
 
-                    match def.as_bytes() {}
+                    let parm_is_valid = Defaults::get_basic_validator(&def)(&parm);
+                    if !parm_is_valid {
+                        crate::error(format!(
+                            "Error: in {}: value for {} is wrong type",
+                            configuration.default_file.to_str().unwrap(),
+                            def
+                        ));
+                    }
+                    let parm_err = |why: &str| -> ! {
+                        crate::error(format!(
+                            "Error: in {}: value for {} is {}",
+                            configuration.default_file.to_str().unwrap(),
+                            def,
+                            why
+                        ));
+                    };
+                    match def.as_str() {
+                        "process_priority" => {
+                            if let Some(pri) = ProcessPriority::new(parm.as_integer()) {
+                                configuration.defaults.process_priority.value = pri;
+                            } else {
+                                parm_err("out of bounds");
+                            }
+                        }
+                        "default_compatibility_level" => {
+                            if let Ok(lev) = CompatibilityLevel::from_str(parm.as_enum_variant()) {
+                                configuration.defaults.default_compatibility_level.value = lev;
+                            } else {
+                                parm_err("not a known compatibility level");
+                            }
+                        }
+                        "realtic_clock_rate" => {
+                            if let Some(rate) = PositiveInt::new(parm.as_integer()) {
+                                configuration.defaults.realtic_clock_rate.value = rate;
+                            }
+                        }
+                        "weapon_attack_alignment" => {}
+                        "player_helpers" => {}
+                        "friend_distance" => {}
+                        _ => {
+                            lprint!(
+                                OutputLevel::WARN,
+                                "Skipping unknown config key {}.",
+                                String::from_utf8_lossy(def.as_bytes())
+                            );
+                        }
+                    }
                 }
             }
             if let Ok(b"") = r.fill_buf() {

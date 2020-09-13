@@ -12,6 +12,7 @@ use crate::{
     misc::args::{ArgMeta, Args},
     wad::WadFileInfo,
 };
+use misc::ConfigParam;
 
 #[derive(Debug)]
 pub(crate) struct Configuration {
@@ -207,13 +208,23 @@ impl Default for Defaults {
     }
 }
 
+impl Defaults {
+    pub fn get_basic_validator(key: &str) -> fn(&ConfigParam) -> bool {
+        match key {
+            "process_priority" => ConfigParam::is_integer,
+            "default_compatibility_level" => ConfigParam::is_enum_variant,
+            _ => |_| true,
+        }
+    }
+}
+
 #[derive(Debug, Clone)]
 pub(crate) struct DefaultValue<T> {
     pub name: &'static str,
     pub value: T,
 }
 
-#[derive(Debug, Copy, Clone)]
+#[derive(Debug, Copy, Clone, enum_utils::FromStr)]
 pub enum CompatibilityLevel {
     DoomV12,
     DoomV1666,
