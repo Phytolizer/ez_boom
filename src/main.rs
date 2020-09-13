@@ -84,7 +84,7 @@ pub(crate) fn error<S: AsRef<str>>(why: S) -> ! {
 fn read_configuration() -> Box<Configuration> {
     let mut configuration = Box::<Configuration>::default();
 
-    // TODO
+    misc::load_defaults(&mut configuration);
 
     configuration
 }
