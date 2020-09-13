@@ -1,6 +1,8 @@
+use serde_derive::{Deserialize, Serialize};
+
 /// Handle IWAD-dependent animations, &c based
 /// on the value of this enum
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Serialize, Deserialize)]
 pub(crate) enum GameMode {
     TBD,
     Shareware,
@@ -9,7 +11,7 @@ pub(crate) enum GameMode {
     Retail,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Serialize, Deserialize)]
 pub(crate) enum GameMission {
     Doom,
     Doom2,
@@ -22,7 +24,7 @@ pub(crate) enum GameMission {
 }
 
 #[allow(dead_code)]
-#[derive(Debug)]
+#[derive(Debug, Serialize, Deserialize)]
 pub(crate) enum Language {
     English,
     French,

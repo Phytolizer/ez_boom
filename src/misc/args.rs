@@ -1,3 +1,5 @@
+use serde_derive::{Deserialize, Serialize};
+
 const PARM_RECORD: &str = "-record";
 const PARM_RECORDFROM: &str = "-recordfrom";
 const PARM_RECORDFROMTO: &str = "-recordfromto";
@@ -10,7 +12,7 @@ const PARM_FASTDEMO: &str = "-fastdemo";
 Information about which args were passed on the command line.
 Related to but not identical to RuntimeConfig.
 **/
-#[derive(Debug)]
+#[derive(Debug, Serialize, Deserialize)]
 pub(crate) struct ArgMeta {
     pub(crate) nomonsters: bool,
     pub(crate) respawnparm: bool,

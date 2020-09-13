@@ -46,7 +46,7 @@ use doom::english::DEVSTR;
 use io::SeekFrom;
 use misc::args;
 use misc::lprint::OutputLevel;
-use std::{convert::TryFrom, env, fs, io, path::PathBuf};
+use std::{convert::TryFrom, env, fs, io, path::Path, path::PathBuf};
 use tables::ANG45;
 use wad::{add_default_extension, FileLump, ReadWadExt, WadFileInfo, WadSource};
 
@@ -347,8 +347,9 @@ fn doom_main_setup(configuration: &mut Configuration) {
 }
 
 fn identify_version(configuration: &mut Configuration) {
-    configuration.save_game_base =
-        PathBuf::from(env::var("DOOMSAVEDIR").unwrap_or_else(|_| doom_exe_dir()));
+    configuration.save_game_base = env::var("DOOMSAVEDIR")
+        .map(|d| PathBuf::from(d))
+        .unwrap_or_else(|_| doom_exe_dir());
     if let Some(i) = configuration.args.check_parm("-save") {
         if i < configuration.args.len() - 1 {
             let path = &configuration.args[i + 1];
@@ -372,28 +373,40 @@ fn identify_version(configuration: &mut Configuration) {
     }
 }
 
-fn add_iwad(configuration: &mut Configuration, iwad: &str) {
-    lprint!(OutputLevel::CONFIRM, "IWAD found: {}\n", iwad);
+fn add_iwad<P: AsRef<Path>>(configuration: &mut Configuration, iwad: P) {
+    let iwad = iwad.as_ref();
+    lprint!(
+        OutputLevel::CONFIRM,
+        "IWAD found: {}\n",
+        iwad.to_str().unwrap()
+    );
     check_iwad(configuration, iwad);
 
+    let iwad_name = iwad
+        .components()
+        .last()
+        .unwrap()
+        .as_os_str()
+        .to_str()
+        .unwrap();
     match configuration.game_mode {
         GameMode::Retail | GameMode::Registered | GameMode::Shareware => {
-            configuration.game_mission = if iwad.ends_with("chex.wad") {
+            configuration.game_mission = if iwad_name == "chex.wad" {
                 GameMission::Chex
             } else {
                 GameMission::Doom
             };
         }
         GameMode::Commercial => {
-            if iwad.ends_with("doom2f.wad") {
+            if iwad_name == "doom2f.wad" {
                 configuration.language = Language::French;
             }
 
-            configuration.game_mission = if iwad.ends_with("tnt.wad") {
+            configuration.game_mission = if iwad_name == "tnt.wad" {
                 GameMission::TNT
-            } else if iwad.ends_with("plutonia.wad") {
+            } else if iwad_name == "plutonia.wad" {
                 GameMission::Plutonia
-            } else if iwad.ends_with("hacx.wad") {
+            } else if iwad_name == "hacx.wad" {
                 GameMission::Hacx
             } else {
                 GameMission::Doom2
@@ -406,9 +419,10 @@ fn add_iwad(configuration: &mut Configuration, iwad: &str) {
     add_file(configuration, iwad, WadSource::Iwad);
 }
 
-fn add_file(configuration: &mut Configuration, file: &str, source: WadSource) {
+fn add_file<P: AsRef<Path>>(configuration: &mut Configuration, file: P, source: WadSource) {
+    let file = file.as_ref();
     configuration.wad_files.push(WadFileInfo {
-        name: PathBuf::from(add_default_extension(file, ".wad")),
+        name: add_default_extension(file, ".wad"),
         src: source,
         handle: 0,
     });
@@ -420,7 +434,7 @@ fn add_file(configuration: &mut Configuration, file: &str, source: WadSource) {
 
     let gwa_filename = add_default_extension(file, ".wad");
     if gwa_filename.ends_with(".wad") {
-        let mut gwa_filename = gwa_filename.into_bytes();
+        let mut gwa_filename = gwa_filename.to_str().unwrap().as_bytes().to_owned();
         let n = gwa_filename.len();
         gwa_filename[n - 3] = b'g';
         gwa_filename[n - 2] = b'w';
@@ -435,19 +449,24 @@ fn add_file(configuration: &mut Configuration, file: &str, source: WadSource) {
     }
 }
 
-fn check_iwad(configuration: &mut Configuration, iwad: &str) {
+fn check_iwad<P: AsRef<Path>>(configuration: &mut Configuration, iwad: P) {
     use std::io::Seek;
 
-    if PathBuf::from(iwad)
-        .access(faccess::AccessMode::READ)
-        .is_err()
-    {
-        error(format!("check_iwad: IWAD {} is not readable", iwad));
+    let iwad = iwad.as_ref();
+
+    if iwad.access(faccess::AccessMode::READ).is_err() {
+        error(format!(
+            "check_iwad: IWAD {} is not readable",
+            iwad.to_str().unwrap()
+        ));
     }
 
     let f = fs::File::open(iwad);
     if f.is_err() {
-        error(format!("check_iwad: Can't open IWAD {}", iwad));
+        error(format!(
+            "check_iwad: Can't open IWAD {}",
+            iwad.to_str().unwrap()
+        ));
     }
     let mut f = f.unwrap();
     let header = f.read_wadinfo().unwrap();
@@ -466,7 +485,10 @@ fn check_iwad(configuration: &mut Configuration, iwad: &str) {
             drop(f);
         })
         .unwrap_or_else(|_| {
-            error(format!("check_iwad: failed to read directory {}", iwad));
+            error(format!(
+                "check_iwad: failed to read directory {}",
+                iwad.to_str().unwrap()
+            ));
         });
 
     let mut length = header.numlumps;
@@ -515,7 +537,10 @@ fn check_iwad(configuration: &mut Configuration, iwad: &str) {
     }
 
     if noiwad && !configuration.bfg_edition && cq < 2 {
-        error(format!("check_iwad: IWAD tag not present for {}", iwad));
+        error(format!(
+            "check_iwad: IWAD tag not present for {}",
+            iwad.to_str().unwrap()
+        ));
     }
 
     configuration.game_mode =
@@ -533,14 +558,14 @@ fn check_iwad(configuration: &mut Configuration, iwad: &str) {
         };
 }
 
-fn find_iwad_file(configuration: &Configuration) -> Option<String> {
+fn find_iwad_file(configuration: &Configuration) -> Option<PathBuf> {
     if let Some(mut i) = configuration.args.check_parm("-iwad") {
         i += 1;
         if i < configuration.args.len() {
             return find_file(&configuration.args[i], ".wad");
         }
     }
-    let mut iwad: Option<String> = None;
+    let mut iwad: Option<PathBuf> = None;
     let mut i = 0;
     while iwad.is_none() {
         if i == STANDARD_IWADS.len() {
@@ -552,7 +577,7 @@ fn find_iwad_file(configuration: &Configuration) -> Option<String> {
     iwad
 }
 
-fn find_file(name: &str, ext: &str) -> Option<String> {
+fn find_file(name: &str, ext: &str) -> Option<PathBuf> {
     find_file_internal(name, ext, false)
 }
 
@@ -561,7 +586,7 @@ struct SearchPath {
     absolute_dir: Option<String>,
     subdir: Option<String>,
     env_var: Option<String>,
-    func: Option<fn() -> String>,
+    func: Option<fn() -> PathBuf>,
 }
 
 impl SearchPath {
@@ -574,7 +599,7 @@ impl SearchPath {
         }
     }
 
-    fn func(f: fn() -> String) -> Self {
+    fn func(f: fn() -> PathBuf) -> Self {
         Self {
             absolute_dir: None,
             subdir: None,
@@ -611,11 +636,11 @@ impl SearchPath {
     }
 }
 
-fn find_file_internal(name: &str, ext: &str, is_static: bool) -> Option<String> {
+fn find_file_internal(name: &str, ext: &str, is_static: bool) -> Option<PathBuf> {
     lazy_static! {
         static ref NUM_SEARCH: RwLock<Option<usize>> = RwLock::new(None);
         static ref SEARCH: RwLock<Vec<SearchPath>> = RwLock::new(vec![]);
-        static ref STATIC_P: RwLock<String> = RwLock::new(String::new());
+        static ref STATIC_P: RwLock<PathBuf> = RwLock::new(PathBuf::new());
     }
     let search_static = [
         SearchPath::func(doom_exe_dir),
@@ -649,48 +674,40 @@ fn find_file_internal(name: &str, ext: &str, is_static: bool) -> Option<String> 
         let path: &SearchPath = path;
         let d = if let Some(ref var) = path.env_var {
             match env::var(var) {
-                Ok(v) => Some(v),
+                Ok(v) => Some(PathBuf::from(v)),
                 Err(_) => continue,
             }
         } else if let Some(func) = path.func {
             Some(func())
         } else if let Some(ref abs) = path.absolute_dir {
-            Some(abs.clone())
+            Some(PathBuf::from(abs))
         } else {
             None
         };
 
         let s = path.subdir.clone();
-        let dynamic_p = RwLock::new(String::new());
+        let dynamic_p = RwLock::new(PathBuf::new());
         let mut p = if is_static {
             STATIC_P.write()
         } else {
             dynamic_p.write()
         };
-        *p = format!(
-            "{}{}{}{}{}",
-            if let Some(ref d) = d { d } else { "" },
-            if let Some(true) = d.as_ref().map(|d| !has_trailing_slash(&d)) {
-                "/"
-            } else {
-                ""
-            },
-            if let Some(ref s) = s { s } else { "" },
-            if let Some(true) = s.as_ref().map(|s| !has_trailing_slash(&s)) {
-                "/"
-            } else {
-                ""
-            },
-            name
-        );
-        if !PathBuf::from(&*p).exists() && !ext.is_empty() {
-            p.push_str(ext);
+        *p = PathBuf::new();
+        if let Some(d) = d {
+            p.push(d);
         }
-        if PathBuf::from(&*p).exists() {
+        if let Some(s) = s {
+            p.push(s);
+        }
+        p.push(name);
+        if !p.exists() && !ext.is_empty() {
+            *p = PathBuf::from(format!("{}{}", p.to_str().unwrap(), ext));
+        }
+        if p.exists() {
             if !is_static {
-                lprint!(OutputLevel::INFO, " found {}\n", &*p);
+                lprint!(OutputLevel::INFO, " found {}\n", p.to_str().unwrap());
             }
-            return Some(p.to_string());
+            return Some(p.clone());
         }
     }
     None
@@ -753,17 +770,25 @@ fn setup_console_masks(configuration: &Configuration) {
 fn find_response_file(configuration: &mut Configuration) {
     for (i, arg) in configuration.args.iter().enumerate() {
         if arg.starts_with('@') {
-            let mut fname = format!("{}.rsp", &arg[1..]);
+            let mut fname = PathBuf::from(format!("{}.rsp", &arg[1..]));
             let file_contents = misc::read_file(&fname);
             let file_contents = match file_contents {
                 Err(_) => {
-                    fname = format!("{}/{}.rsp", doom_exe_dir(), &arg[1..]);
-                    misc::read_file(&fname)
-                        .unwrap_or_else(|_| error(format!("No such response file: {}", fname)))
+                    fname = doom_exe_dir().join(format!("{}.rsp", &arg[1..]));
+                    misc::read_file(&fname).unwrap_or_else(|_| {
+                        error(format!(
+                            "No such response file: {}",
+                            fname.to_str().unwrap()
+                        ))
+                    })
                 }
                 Ok(file_contents) => file_contents,
             };
-            lprint!(OutputLevel::CONFIRM, "Found response file {}\n", fname);
+            lprint!(
+                OutputLevel::CONFIRM,
+                "Found response file {}\n",
+                fname.to_str().unwrap()
+            );
             if file_contents.is_empty() {
                 lprint!(OutputLevel::ERROR, "\nResponse file empty!\n");
 
@@ -824,14 +849,15 @@ fn find_response_file(configuration: &mut Configuration) {
     }
 }
 
-const PRBOOM_DIR: &str = "/.prboom-plus";
-fn doom_exe_dir() -> String {
+const EZBOOM_DIR: &str = ".ezboom";
+fn doom_exe_dir() -> PathBuf {
     lazy_static! {
-        static ref DOOM_EXE_DIR: RwLock<Option<String>> = RwLock::new(None);
+        static ref DOOM_EXE_DIR: RwLock<Option<PathBuf>> = RwLock::new(None);
     }
     if DOOM_EXE_DIR.read().is_none() {
-        let home = std::env::var("HOME").unwrap();
-        *DOOM_EXE_DIR.write() = Some(format!("{}/{}", home, PRBOOM_DIR));
+        let mut p = dirs::home_dir().unwrap();
+        p.push(EZBOOM_DIR);
+        *DOOM_EXE_DIR.write() = Some(p);
         match std::fs::create_dir(&DOOM_EXE_DIR.read().as_ref().unwrap()) {
             Ok(_) => {}
             Err(e) => match e.kind() {
@@ -839,7 +865,6 @@ fn doom_exe_dir() -> String {
                 _ => panic!("creating file: {}", e),
             },
         }
-        normalize_slashes(&mut DOOM_EXE_DIR.write().as_mut().unwrap());
     }
     DOOM_EXE_DIR.read().as_ref().unwrap().clone()
 }

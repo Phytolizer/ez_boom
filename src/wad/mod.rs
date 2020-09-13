@@ -1,6 +1,7 @@
 use byteorder::{LittleEndian, ReadBytesExt};
 use io::Read;
-use std::{io, mem, path::PathBuf};
+use serde_derive::{Deserialize, Serialize};
+use std::{io, mem, path::Path, path::PathBuf};
 
 #[derive(Debug)]
 pub(crate) struct WadInfo {
@@ -9,7 +10,7 @@ pub(crate) struct WadInfo {
     pub(crate) infotableofs: i32,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Serialize, Deserialize)]
 pub(crate) struct WadFileInfo {
     pub(crate) name: PathBuf,
     pub(crate) src: WadSource,
@@ -53,7 +54,7 @@ where
 }
 
 #[allow(dead_code)]
-#[derive(Debug, Copy, Clone)]
+#[derive(Debug, Copy, Clone, Serialize, Deserialize)]
 pub(crate) enum WadSource {
     Iwad = 0,
     Pre,
@@ -65,7 +66,8 @@ pub(crate) enum WadSource {
     Err,
 }
 
-pub(crate) fn add_default_extension(path: &str, ext: &str) -> String {
+pub(crate) fn add_default_extension<P: AsRef<Path>>(path: P, ext: &str) -> PathBuf {
+    let path = path.as_ref().to_str().unwrap();
     let pb = path.as_bytes();
     let mut p = path.len();
     // check for . in last path component
@@ -73,7 +75,7 @@ pub(crate) fn add_default_extension(path: &str, ext: &str) -> String {
         p -= 1;
         if pb[p] == b'.' {
             // file already has an extension
-            return path.to_string();
+            return PathBuf::from(path.to_string());
         }
     }
     // must add the extension ourselves
@@ -82,5 +84,5 @@ pub(crate) fn add_default_extension(path: &str, ext: &str) -> String {
         path.push('.');
     }
     path.push_str(ext);
-    path
+    PathBuf::from(path)
 }

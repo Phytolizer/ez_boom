@@ -1,7 +1,7 @@
 #![allow(dead_code)]
 
 use bounded_integer::bounded_integer;
-use num::clamp;
+use ops::Range;
 use std::{convert::TryFrom, env, fmt::Display, ops, path::PathBuf};
 
 use crate::{
@@ -104,49 +104,66 @@ impl Default for Configuration {
 
             view_angle_offset: 0,
 
-            default_file: PathBuf::from(&format!("{}/{}", doom_exe_dir(), misc::BOOM_CFG)),
+            default_file: doom_exe_dir().join(misc::BOOM_CFG),
 
-            weapon_recoil: defaults.weapon_recoil,
-            player_bobbing: defaults.player_bobbing,
-            variable_friction: defaults.variable_friction,
+            weapon_recoil: defaults.weapon_recoil.value,
+            player_bobbing: defaults.player_bobbing.value,
+            variable_friction: defaults.variable_friction.value,
         }
     }
 }
 
 #[derive(Debug)]
 pub(crate) struct Defaults {
-    pub process_priority: ProcessPriority,
-    pub default_compatibility_level: CompatibilityLevel,
-    pub realtic_clock_rate: PositiveInt,
-    pub menu_background: bool,
-    pub body_queue_size: OptionalLimit,
-    pub flashing_hom: bool,
-    pub demo_insurance: DemoInsurance,
-    pub endoom_mode: EndoomMode,
-    pub level_precache: bool,
-    pub demo_smoothturns: DemoSmoothTurns,
-    pub boom_autoswitch: bool,
-    pub wad_files: Vec<PathBuf>,
-    pub deh_files: Vec<PathBuf>,
-    pub default_skill: SkillLevel,
-    pub weapon_recoil: bool,
-    pub doom_weapon_toggles: bool,
-    pub player_bobbing: bool,
-    pub weapon_attack_alignment: WeaponAttackAlignment,
-    pub monsters_remember: bool,
-    pub monster_infighting: MonsterInfightingLevel,
-    pub monster_backing: bool,
-    pub monster_avoid_hazards: bool,
-    pub monkeys: bool,
-    pub monster_friction: bool,
-    pub help_friends: bool,
-    pub allow_pushers: bool,
-    pub variable_friction: bool,
+    pub process_priority: DefaultValue<ProcessPriority>,
+    pub default_compatibility_level: DefaultValue<CompatibilityLevel>,
+    pub realtic_clock_rate: DefaultValue<PositiveInt>,
+    pub menu_background: DefaultValue<bool>,
+    pub body_queue_size: DefaultValue<OptionalLimit>,
+    pub flashing_hom: DefaultValue<bool>,
+    pub demo_insurance: DefaultValue<DemoInsurance>,
+    pub endoom_mode: DefaultValue<EndoomMode>,
+    pub level_precache: DefaultValue<bool>,
+    pub demo_smoothturns: DefaultValue<DemoSmoothTurns>,
+    pub boom_autoswitch: DefaultValue<bool>,
+    pub wad_files: DefaultValue<Vec<PathBuf>>,
+    pub deh_files: DefaultValue<Vec<PathBuf>>,
+    pub default_skill: DefaultValue<SkillLevel>,
+    pub weapon_recoil: DefaultValue<bool>,
+    pub doom_weapon_toggles: DefaultValue<bool>,
+    pub player_bobbing: DefaultValue<bool>,
+    pub weapon_attack_alignment: DefaultValue<WeaponAttackAlignment>,
+    pub monsters_remember: DefaultValue<bool>,
+    pub monster_infighting: DefaultValue<MonsterInfightingLevel>,
+    pub monster_backing: DefaultValue<bool>,
+    pub monster_avoid_hazards: DefaultValue<bool>,
+    pub monkeys: DefaultValue<bool>,
+    pub monster_friction: DefaultValue<bool>,
+    pub help_friends: DefaultValue<bool>,
+    pub allow_pushers: DefaultValue<bool>,
+    pub variable_friction: DefaultValue<bool>,
+    pub player_helpers: DefaultValue<PlayerHelpers>,
+    pub friend_distance: DefaultValue<FriendDistance>,
+    pub dog_jumping: DefaultValue<bool>,
+    pub sts_always_red: DefaultValue<bool>,
+    pub sts_pct_always_gray: DefaultValue<bool>,
+}
+
+macro_rules! default_values {
+    (
+        $sname:tt {
+            $($name:ident: $value:expr,)*
+        }
+    ) => {
+        $sname {
+            $($name : DefaultValue{name: stringify!($name), value:$value},)*
+        }
+    };
 }
 
 impl Default for Defaults {
     fn default() -> Self {
-        Self {
+        default_values!(Self {
             process_priority: ProcessPriority::new(0).unwrap(),
             default_compatibility_level: CompatibilityLevel::PrBoomLatest,
             realtic_clock_rate: PositiveInt::new(100).unwrap(),
@@ -181,10 +198,22 @@ impl Default for Defaults {
             help_friends: false,
             allow_pushers: true,
             variable_friction: true,
-        }
+            player_helpers: PlayerHelpers::new(0).unwrap(),
+            friend_distance: FriendDistance::new(128).unwrap(),
+            dog_jumping: true,
+            sts_always_red: true,
+            sts_pct_always_gray: false,
+        })
     }
 }
-#[derive(Debug)]
+
+#[derive(Debug, Clone)]
+pub(crate) struct DefaultValue<T> {
+    pub name: &'static str,
+    pub value: T,
+}
+
+#[derive(Debug, Copy, Clone)]
 pub enum CompatibilityLevel {
     DoomV12,
     DoomV1666,
@@ -206,10 +235,57 @@ pub enum CompatibilityLevel {
     PrBoomLatest,
 }
 
+impl Default for CompatibilityLevel {
+    fn default() -> Self {
+        Self::PrBoomLatest
+    }
+}
+
+#[derive(Debug)]
+pub struct BoundedInt<T>
+where
+    T: PartialOrd + Copy,
+{
+    bounds: Range<T>,
+    value: T,
+}
+
+impl<T> BoundedInt<T>
+where
+    T: PartialOrd + Copy,
+{
+    pub fn new(bounds: Range<T>, value: T) -> BoundedInt<T> {
+        if !bounds.contains(&value) {
+            panic!("value out of range");
+        }
+        Self { bounds, value }
+    }
+
+    pub fn set(&mut self, value: T) -> Result<(), ()> {
+        if self.bounds.contains(&value) {
+            self.value = value;
+            Ok(())
+        } else {
+            Err(())
+        }
+    }
+
+    pub fn get(&self) -> T {
+        self.value
+    }
+}
+
 bounded_integer! {
     #[repr(i32)]
     pub struct ProcessPriority { 0..=2 }
 }
+
+impl Default for ProcessPriority {
+    fn default() -> Self {
+        Self::new(0).unwrap()
+    }
+}
+
 bounded_integer! {
     #[repr(i32)]
     pub struct PositiveInt { 0..std::i32::MAX }
@@ -221,7 +297,7 @@ pub enum OptionalLimit {
     Limit(PositiveInt),
 }
 
-#[derive(Debug)]
+#[derive(Debug, Copy, Clone)]
 pub enum DemoInsurance {
     None,
     Always,
@@ -243,7 +319,7 @@ bounded_integer! {
     pub struct WeaponAttackAlignment { 0..=3 }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Copy, Clone)]
 pub enum SkillLevel {
     None,
     Itytd,
@@ -285,7 +361,7 @@ impl Display for SkillLevel {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Copy, Clone)]
 pub enum MonsterInfightingLevel {
     None,
     OtherSpecies,
@@ -480,129 +556,4 @@ pub enum LightMode {
 pub struct EmulationSetting {
     pub warn: bool,
     pub emulate: bool,
-}
-
-pub struct BoundedInt {
-    pub value: i32,
-    pub min: i32,
-    pub max: i32,
-}
-
-pub type HexInt = BoundedInt;
-pub type KeyInt = BoundedInt;
-pub type MouseButton = BoundedInt;
-pub type Color = BoundedInt;
-
-impl BoundedInt {
-    pub fn new(value: i32, min: i32, max: i32) -> Self {
-        Self { value, min, max }
-    }
-
-    pub fn set(&mut self, value: i32) {
-        self.value = clamp(value, self.min, self.max);
-    }
-}
-
-impl ops::Add for BoundedInt {
-    type Output = i32;
-    fn add(self, rhs: Self) -> Self::Output {
-        self.value + rhs.value
-    }
-}
-
-impl ops::AddAssign for BoundedInt {
-    fn add_assign(&mut self, rhs: Self) {
-        let value = self.value.saturating_add(rhs.value);
-        self.value = clamp(value, self.min, self.max);
-    }
-}
-
-impl ops::BitAnd for BoundedInt {
-    type Output = i32;
-    fn bitand(self, rhs: Self) -> Self::Output {
-        self.value & rhs.value
-    }
-}
-
-impl ops::BitAndAssign for BoundedInt {
-    fn bitand_assign(&mut self, rhs: Self) {
-        let value = self.value & rhs.value;
-        self.value = clamp(value, self.min, self.max);
-    }
-}
-
-impl ops::BitOr for BoundedInt {
-    type Output = i32;
-    fn bitor(self, rhs: Self) -> Self::Output {
-        self.value | rhs.value
-    }
-}
-
-impl ops::BitOrAssign for BoundedInt {
-    fn bitor_assign(&mut self, rhs: Self) {
-        let value = self.value | rhs.value;
-        self.value = clamp(value, self.min, self.max);
-    }
-}
-
-impl ops::BitXor for BoundedInt {
-    type Output = i32;
-    fn bitxor(self, rhs: Self) -> Self::Output {
-        self.value ^ rhs.value
-    }
-}
-
-impl ops::BitXorAssign for BoundedInt {
-    fn bitxor_assign(&mut self, rhs: Self) {
-        let value = self.value ^ rhs.value;
-        self.value = clamp(value, self.min, self.max);
-    }
-}
-
-impl ops::Div for BoundedInt {
-    type Output = i32;
-    fn div(self, rhs: Self) -> Self::Output {
-        self.value / rhs.value
-    }
-}
-
-impl ops::DivAssign for BoundedInt {
-    fn div_assign(&mut self, rhs: Self) {
-        let value = self.value / rhs.value;
-        self.value = clamp(value, self.min, self.max);
-    }
-}
-
-impl ops::Mul for BoundedInt {
-    type Output = i32;
-    fn mul(self, rhs: Self) -> Self::Output {
-        self.value * rhs.value
-    }
-}
-
-impl ops::MulAssign for BoundedInt {
-    fn mul_assign(&mut self, rhs: Self) {
-        let value = self.value * rhs.value;
-        self.value = clamp(value, self.min, self.max);
-    }
-}
-
-impl ops::Sub for BoundedInt {
-    type Output = i32;
-    fn sub(self, rhs: Self) -> Self::Output {
-        self.value - rhs.value
-    }
-}
-
-impl ops::SubAssign for BoundedInt {
-    fn sub_assign(&mut self, rhs: Self) {
-        let value = self.value - rhs.value;
-        self.value = clamp(value, self.min, self.max);
-    }
-}
-
-impl From<BoundedInt> for i32 {
-    fn from(i: BoundedInt) -> Self {
-        i.value
-    }
 }
