@@ -116,121 +116,247 @@ impl Default for Configuration {
     }
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, Default)]
 pub(crate) struct Defaults {
     #[serde(default = "default_process_priority")]
     pub process_priority: ProcessPriority,
+    #[serde(default = "default_default_compatibility_level")]
     pub default_compatibility_level: CompatibilityLevel,
+    #[serde(default = "default_realtic_clock_rate")]
     pub realtic_clock_rate: PositiveInt,
+    #[serde(default = "default_menu_background")]
     pub menu_background: bool,
+    #[serde(default = "default_body_queue_size")]
     pub body_queue_size: OptionalLimit,
+    #[serde(default = "default_flashing_hom")]
     pub flashing_hom: bool,
+    #[serde(default = "default_demo_insurance")]
     pub demo_insurance: DemoInsurance,
+    #[serde(default = "default_endoom_mode")]
     pub endoom_mode: EndoomMode,
+    #[serde(default = "default_level_precache")]
     pub level_precache: bool,
+    #[serde(default = "default_demo_smoothturns")]
     pub demo_smoothturns: DemoSmoothTurns,
+    #[serde(default = "default_boom_autoswitch")]
     pub boom_autoswitch: bool,
+    #[serde(default = "default_wad_files")]
     pub wad_files: Vec<PathBuf>,
+    #[serde(default = "default_deh_files")]
     pub deh_files: Vec<PathBuf>,
+    #[serde(default = "default_default_skill")]
     pub default_skill: SkillLevel,
+    #[serde(default = "default_weapon_recoil")]
     pub weapon_recoil: bool,
+    #[serde(default = "default_doom_weapon_toggles")]
     pub doom_weapon_toggles: bool,
+    #[serde(default = "default_player_bobbing")]
     pub player_bobbing: bool,
+    #[serde(default = "default_weapon_attack_alignment")]
     pub weapon_attack_alignment: WeaponAttackAlignment,
+    #[serde(default = "default_monsters_remember")]
     pub monsters_remember: bool,
+    #[serde(default = "default_monster_infighting")]
     pub monster_infighting: MonsterInfightingLevel,
+    #[serde(default = "default_monster_backing")]
     pub monster_backing: bool,
+    #[serde(default = "default_monster_avoid_hazards")]
     pub monster_avoid_hazards: bool,
+    #[serde(default = "default_monkeys")]
     pub monkeys: bool,
+    #[serde(default = "default_monster_friction")]
     pub monster_friction: bool,
+    #[serde(default = "default_help_friends")]
     pub help_friends: bool,
+    #[serde(default = "default_allow_pushers")]
     pub allow_pushers: bool,
+    #[serde(default = "default_variable_friction")]
     pub variable_friction: bool,
+    #[serde(default = "default_player_helpers")]
     pub player_helpers: PlayerHelpers,
+    #[serde(default = "default_friend_distance")]
     pub friend_distance: FriendDistance,
+    #[serde(default = "default_dog_jumping")]
     pub dog_jumping: bool,
+    #[serde(default = "default_sts_always_red")]
     pub sts_always_red: bool,
+    #[serde(default = "default_sts_pct_always_gray")]
     pub sts_pct_always_gray: bool,
 }
 
-#[derive(Debug, Serialize, Deserialize)]
-pub struct DefaultsOpt {
-    pub process_priority: Option<ProcessPriority>,
-    pub default_compatibility_level: Option<CompatibilityLevel>,
-}
-
-impl Default for Defaults {
-    fn default() -> Self {
-        Self {
-            process_priority: default_process_priority(),
-            default_compatibility_level: CompatibilityLevel::PrBoomLatest,
-            realtic_clock_rate: PositiveInt::new(100).unwrap(),
-            menu_background: true,
-            body_queue_size: OptionalLimit::Limit(PositiveInt::new(32).unwrap()),
-            flashing_hom: false,
-            demo_insurance: DemoInsurance::DuringDemoRecording,
-            endoom_mode: EndoomMode {
-                colors: true,
-                non_ascii_chars: false,
-                skip_last_line: true,
-            },
-            level_precache: true,
-            demo_smoothturns: DemoSmoothTurns {
-                enabled: true,
-                factor: SmoothTurnsFactor::new(6).unwrap(),
-            },
-            boom_autoswitch: true,
-            wad_files: vec![],
-            deh_files: vec![],
-            default_skill: SkillLevel::Hmp,
-            weapon_recoil: false,
-            doom_weapon_toggles: true,
-            player_bobbing: true,
-            weapon_attack_alignment: WeaponAttackAlignment::new(0).unwrap(),
-            monsters_remember: true,
-            monster_infighting: MonsterInfightingLevel::OtherSpecies,
-            monster_backing: false,
-            monster_avoid_hazards: true,
-            monkeys: false,
-            monster_friction: true,
-            help_friends: false,
-            allow_pushers: true,
-            variable_friction: true,
-            player_helpers: PlayerHelpers::new(0).unwrap(),
-            friend_distance: FriendDistance::new(128).unwrap(),
-            dog_jumping: true,
-            sts_always_red: true,
-            sts_pct_always_gray: false,
-        }
-    }
-}
+// impl Default for Defaults {
+//     fn default() -> Self {
+//         Self {
+//             process_priority: default_process_priority(),
+//             default_compatibility_level: default_default_compatibility_level(),
+//             realtic_clock_rate: default_realtic_clock_rate(),
+//             menu_background: default_menu_background(),
+//             body_queue_size: default_body_queue_size(),
+//             flashing_hom: default_flashing_hom(),
+//             demo_insurance: default_demo_insurance(),
+//             endoom_mode: default_endoom_mode(),
+//             level_precache: default_level_precache(),
+//             demo_smoothturns: default_demo_smoothturns(),
+//             boom_autoswitch: default_boom_autoswitch(),
+//             wad_files: default_wad_files(),
+//             deh_files: default_deh_files(),
+//             default_skill: default_default_skill(),
+//             weapon_recoil: default_weapon_recoil(),
+//             doom_weapon_toggles: default_doom_weapon_toggles(),
+//             player_bobbing: default_player_bobbing(),
+//             weapon_attack_alignment: default_weapon_attack_alignment(),
+//             monsters_remember: default_monsters_remember(),
+//             monster_infighting: default_monster_infighting(),
+//             monster_backing: default_monster_backing(),
+//             monster_avoid_hazards: default_monster_avoid_hazards(),
+//             monkeys: default_monkeys(),
+//             monster_friction: default_monster_friction(),
+//             help_friends: default_help_friends(),
+//             allow_pushers: default_allow_pushers(),
+//             variable_friction: default_variable_friction(),
+//             player_helpers: default_player_helpers(),
+//             friend_distance: default_friend_distance(),
+//             dog_jumping: default_dog_jumping(),
+//             sts_always_red: default_sts_always_red(),
+//             sts_pct_always_gray: default_sts_pct_always_gray(),
+//         }
+//     }
+// }
 
 fn default_process_priority() -> ProcessPriority {
     ProcessPriority::new(0).unwrap()
 }
 
-// impl Defaults {
-//     pub fn get_basic_validator(key: &str) -> fn(&ConfigParam) -> bool {
-//         match key {
-//             "process_priority" => ConfigParam::is_integer,
-//             "default_compatibility_level" => ConfigParam::is_enum_variant,
-//             "realtic_clock_rate" => ConfigParam::is_integer,
-//             "menu_background" => ConfigParam::is_bool,
-//             "body_queue_size" => |p| p.is_integer() || p.is_enum_variant(),
-//             "flashing_hom" => ConfigParam::is_bool,
-//             "demo_insurance" => ConfigParam::is_enum_variant,
-//             "endoom_mode" => ConfigParam::is_integer,
-//             "level_precache" => ConfigParam::is_bool,
-//             _ => |_| true,
-//         }
-//     }
-// }
+fn default_default_compatibility_level() -> CompatibilityLevel {
+    CompatibilityLevel::PrBoomLatest
+}
 
-// #[derive(Debug, Clone)]
-// pub(crate) struct DefaultValue<T> {
-//     pub name: &'static str,
-//     pub value: T,
-// }
+fn default_realtic_clock_rate() -> PositiveInt {
+    PositiveInt::new(100).unwrap()
+}
+
+fn default_menu_background() -> bool {
+    true
+}
+
+fn default_body_queue_size() -> OptionalLimit {
+    OptionalLimit::Limit(PositiveInt::new(32).unwrap())
+}
+
+fn default_flashing_hom() -> bool {
+    false
+}
+
+fn default_demo_insurance() -> DemoInsurance {
+    DemoInsurance::DuringDemoRecording
+}
+
+fn default_endoom_mode() -> EndoomMode {
+    EndoomMode {
+        colors: true,
+        non_ascii_chars: false,
+        skip_last_line: true,
+    }
+}
+
+fn default_level_precache() -> bool {
+    true
+}
+
+fn default_demo_smoothturns() -> DemoSmoothTurns {
+    DemoSmoothTurns {
+        enabled: true,
+        factor: SmoothTurnsFactor::new(6).unwrap(),
+    }
+}
+
+fn default_boom_autoswitch() -> bool {
+    true
+}
+
+fn default_wad_files() -> Vec<PathBuf> {
+    vec![]
+}
+
+fn default_deh_files() -> Vec<PathBuf> {
+    vec![]
+}
+
+fn default_default_skill() -> SkillLevel {
+    SkillLevel::Hmp
+}
+
+fn default_weapon_recoil() -> bool {
+    false
+}
+
+fn default_doom_weapon_toggles() -> bool {
+    true
+}
+
+fn default_player_bobbing() -> bool {
+    true
+}
+
+fn default_weapon_attack_alignment() -> WeaponAttackAlignment {
+    WeaponAttackAlignment::new(0).unwrap()
+}
+
+fn default_monsters_remember() -> bool {
+    true
+}
+
+fn default_monster_infighting() -> MonsterInfightingLevel {
+    MonsterInfightingLevel::OtherSpecies
+}
+
+fn default_monster_backing() -> bool {
+    false
+}
+
+fn default_monster_avoid_hazards() -> bool {
+    true
+}
+
+fn default_monkeys() -> bool {
+    false
+}
+
+fn default_monster_friction() -> bool {
+    true
+}
+
+fn default_help_friends() -> bool {
+    false
+}
+
+fn default_allow_pushers() -> bool {
+    true
+}
+
+fn default_variable_friction() -> bool {
+    true
+}
+
+fn default_player_helpers() -> PlayerHelpers {
+    PlayerHelpers::new(0).unwrap()
+}
+
+fn default_friend_distance() -> FriendDistance {
+    FriendDistance::new(128).unwrap()
+}
+
+fn default_dog_jumping() -> bool {
+    true
+}
+
+fn default_sts_always_red() -> bool {
+    true
+}
+
+fn default_sts_pct_always_gray() -> bool {
+    false
+}
 
 #[derive(Debug, Copy, Clone, EnumString, Serialize, Deserialize)]
 pub enum CompatibilityLevel {
@@ -262,19 +388,13 @@ impl Default for CompatibilityLevel {
 
 bounded_integer! {
     #[repr(i32)]
-    #[derive(Serialize, Deserialize)]
+    #[derive(Serialize, Deserialize, Default)]
     pub struct ProcessPriority { 0..=2 }
-}
-
-impl Default for ProcessPriority {
-    fn default() -> Self {
-        Self::new(0).unwrap()
-    }
 }
 
 bounded_integer! {
     #[repr(i32)]
-    #[derive(Serialize, Deserialize)]
+    #[derive(Serialize, Deserialize, Default)]
     pub struct PositiveInt { 0..std::i32::MAX }
 }
 
@@ -284,6 +404,12 @@ pub enum OptionalLimit {
     Limit(PositiveInt),
 }
 
+impl Default for OptionalLimit {
+    fn default() -> Self {
+        OptionalLimit::NoLimit
+    }
+}
+
 #[derive(Debug, Copy, Clone, Serialize, Deserialize)]
 pub enum DemoInsurance {
     None,
@@ -291,7 +417,13 @@ pub enum DemoInsurance {
     DuringDemoRecording,
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+impl Default for DemoInsurance {
+    fn default() -> Self {
+        DemoInsurance::DuringDemoRecording
+    }
+}
+
+#[derive(Debug, Serialize, Deserialize, Default)]
 pub struct DemoSmoothTurns {
     pub enabled: bool,
     pub factor: SmoothTurnsFactor,
@@ -299,12 +431,12 @@ pub struct DemoSmoothTurns {
 
 bounded_integer! {
     #[repr(i32)]
-    #[derive(Serialize, Deserialize)]
+    #[derive(Serialize, Deserialize, Default)]
     pub struct SmoothTurnsFactor { 1..=16 }
 }
 bounded_integer! {
     #[repr(i32)]
-    #[derive(Serialize, Deserialize)]
+    #[derive(Serialize, Deserialize, Default)]
     pub struct WeaponAttackAlignment { 0..=3 }
 }
 
@@ -350,6 +482,12 @@ impl Display for SkillLevel {
     }
 }
 
+impl Default for SkillLevel {
+    fn default() -> Self {
+        SkillLevel::Hmp
+    }
+}
+
 #[derive(Debug, Copy, Clone, Serialize, Deserialize)]
 pub enum MonsterInfightingLevel {
     None,
@@ -357,14 +495,20 @@ pub enum MonsterInfightingLevel {
     All,
 }
 
+impl Default for MonsterInfightingLevel {
+    fn default() -> Self {
+        MonsterInfightingLevel::OtherSpecies
+    }
+}
+
 bounded_integer! {
     #[repr(i32)]
-    #[derive(Serialize, Deserialize)]
+    #[derive(Serialize, Deserialize, Default)]
     pub struct PlayerHelpers { 0..=3 }
 }
 bounded_integer! {
     #[repr(i32)]
-    #[derive(Serialize, Deserialize)]
+    #[derive(Serialize, Deserialize, Default)]
     pub struct FriendDistance { 0..1000 }
 }
 
@@ -473,7 +617,7 @@ pub enum AnisotropicFilter {
     On16x,
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, Default)]
 pub struct EndoomMode {
     pub colors: bool,
     pub non_ascii_chars: bool,
