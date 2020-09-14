@@ -112,8 +112,6 @@ impl ConfigParam {
 }
 
 pub(crate) fn load_defaults(configuration: &mut Configuration) {
-    let mut defaults = &mut configuration.defaults;
-
     if let Some(i) = configuration.args.check_parm("-config") {
         if i < configuration.args.len() - 1 {
             configuration.default_file = PathBuf::from(&configuration.args[i + 1]);
@@ -134,157 +132,152 @@ pub(crate) fn load_defaults(configuration: &mut Configuration) {
     if let Ok(f) = fs::File::open(&configuration.default_file) {
         let config_param_regex = Regex::new(r#"^\s*(\S+)\s+(\S+|"(?:.+)")\s*$"#).unwrap();
         let mut r = BufReader::new(f);
-        loop {
-            let mut line = Vec::<u8>::new();
-            r.read_until(b'\n', &mut line).unwrap_or_else(|_| {
-                crate::error("Failed reading a line from the configuration file!")
-            });
-            if line.is_empty() {
-                continue;
-            }
-            if line[0].is_ascii_alphanumeric() {
-                // not a comment
-                if let Some(caps) = config_param_regex.captures(&line) {
-                    // valid config item
-                    let def = caps.get(1).unwrap();
-                    let strparm = caps.get(2).unwrap();
-                    let mut is_string = false;
+        configuration.defaults = serde_yaml::from_reader(f).unwrap_or_else(|e| {
+            crate::error(format!(
+                "Error: reading {}: {}",
+                configuration.default_file.to_str().unwrap(),
+                e
+            ))
+        });
+        // loop {
+        //     let mut line = Vec::<u8>::new();
+        //     r.read_until(b'\n', &mut line).unwrap_or_else(|_| {
+        //         crate::error("Failed reading a line from the configuration file!")
+        //     });
+        //     if line.is_empty() {
+        //         continue;
+        //     }
+        //     let fname = configuration.default_file.to_str().unwrap();
+        //     if line[0].is_ascii_alphanumeric() {
+        //         // not a comment
 
-                    let parm = if def.as_bytes().starts_with(br#"""#) {
-                        is_string = true;
-                        ConfigParam::String(def.as_bytes()[1..def.range().len() - 1].to_owned())
-                    } else if strparm.as_bytes().starts_with(b"0x") {
-                        let strparm = &strparm.as_bytes()[2..];
-                        ConfigParam::Integer(
-                            i32::from_str_radix(&String::from_utf8_lossy(strparm), 16)
-                                .unwrap_or_else(|_| {
-                                    crate::error(format!(
-                                        "Error: in {}: bad hexadecimal integer {}",
-                                        configuration.default_file.to_str().unwrap(),
-                                        String::from_utf8_lossy(strparm),
-                                    ))
-                                }),
-                        )
-                    } else if strparm.as_bytes()[0].is_ascii_alphabetic() {
-                        // enum variant, probably
-                        if strparm.as_bytes() == b"true" || strparm.as_bytes() == b"false" {
-                            ConfigParam::Bool(strparm.as_bytes() == b"true")
-                        } else {
-                            ConfigParam::EnumVariant(
-                                String::from_utf8(strparm.as_bytes().to_owned()).unwrap_or_else(
-                                    |_| {
-                                        crate::error(format!(
-                                            "Error: in {}: parameter to {} is not valid UTF-8",
-                                            configuration.default_file.to_str().unwrap(),
-                                            String::from_utf8_lossy(def.as_bytes())
-                                        ))
-                                    },
-                                ),
-                            )
-                        }
-                    } else if strparm.as_bytes()[0] == b'[' {
-                        // array
-                        let mut res = strparm.as_bytes()[1..].to_owned();
-                        let mut buf = Vec::<u8>::new();
-                        r.read_until(b']', &mut buf).unwrap_or_else(|e| {
-                            crate::error(format!(
-                                "Error: reading {}: {}",
-                                configuration.default_file.to_str().unwrap(),
-                                e
-                            ))
-                        });
-                        res.append(&mut buf);
-                        // remove closing ']' since read_until includes it
-                        res.remove(res.len() - 1);
-                        ConfigParam::Array(res)
-                    } else {
-                        ConfigParam::Integer(
-                            String::from_utf8_lossy(strparm.as_bytes())
-                                .parse()
-                                .unwrap_or_else(|_| {
-                                    crate::error(format!(
-                                        "Error: in {}: bad integer {}",
-                                        configuration.default_file.to_str().unwrap(),
-                                        String::from_utf8_lossy(strparm.as_bytes())
-                                    ))
-                                }),
-                        )
-                    };
+        //         // if let Some(caps) = config_param_regex.captures(&line) {
+        //         //     // valid config item
+        //         //     let def = caps.get(1).unwrap();
+        //         //     let strparm = caps.get(2).unwrap();
 
-                    let def = String::from_utf8_lossy(def.as_bytes()).to_string();
+        //         //     let parm = if def.as_bytes().starts_with(br#"""#) {
+        //         //         ConfigParam::String(def.as_bytes()[1..def.range().len() - 1].to_owned())
+        //         //     } else if strparm.as_bytes().starts_with(b"0x") {
+        //         //         let strparm = &strparm.as_bytes()[2..];
+        //         //         ConfigParam::Integer(
+        //         //             i32::from_str_radix(&String::from_utf8_lossy(strparm), 16)
+        //         //                 .unwrap_or_else(|_| {
+        //         //                     crate::error(format!(
+        //         //                         "Error: in {}: bad hexadecimal integer {}",
+        //         //                         fname,
+        //         //                         String::from_utf8_lossy(strparm),
+        //         //                     ))
+        //         //                 }),
+        //         //         )
+        //         //     } else if strparm.as_bytes()[0].is_ascii_alphabetic() {
+        //         //         // enum variant, probably
+        //         //         if strparm.as_bytes() == b"true" || strparm.as_bytes() == b"false" {
+        //         //             ConfigParam::Bool(strparm.as_bytes() == b"true")
+        //         //         } else {
+        //         //             ConfigParam::EnumVariant(
+        //         //                 String::from_utf8(strparm.as_bytes().to_owned()).unwrap_or_else(
+        //         //                     |_| {
+        //         //                         crate::error(format!(
+        //         //                             "Error: in {}: parameter to {} is not valid UTF-8",
+        //         //                             fname,
+        //         //                             String::from_utf8_lossy(def.as_bytes())
+        //         //                         ))
+        //         //                     },
+        //         //                 ),
+        //         //             )
+        //         //         }
+        //         //     } else if strparm.as_bytes()[0] == b'[' {
+        //         //         // array
+        //         //         let mut res = strparm.as_bytes()[1..].to_owned();
+        //         //         let mut buf = Vec::<u8>::new();
+        //         //         r.read_until(b']', &mut buf).unwrap_or_else(|e| {
+        //         //             crate::error(format!("Error: reading {}: {}", fname, e))
+        //         //         });
+        //         //         res.append(&mut buf);
+        //         //         // remove closing ']' since read_until includes it
+        //         //         res.remove(res.len() - 1);
+        //         //         ConfigParam::Array(res)
+        //         //     } else {
+        //         //         ConfigParam::Integer(
+        //         //             String::from_utf8_lossy(strparm.as_bytes())
+        //         //                 .parse()
+        //         //                 .unwrap_or_else(|_| {
+        //         //                     crate::error(format!(
+        //         //                         "Error: in {}: bad integer {}",
+        //         //                         fname,
+        //         //                         String::from_utf8_lossy(strparm.as_bytes())
+        //         //                     ))
+        //         //                 }),
+        //         //         )
+        //         //     };
 
-                    let parm_is_valid = Defaults::get_basic_validator(&def)(&parm);
-                    if !parm_is_valid {
-                        crate::error(format!(
-                            "Error: in {}: value for {} is wrong type",
-                            configuration.default_file.to_str().unwrap(),
-                            def
-                        ));
-                    }
-                    let parm_err = |why: &str| -> ! {
-                        crate::error(format!(
-                            "Error: in {}: value for {} is {}",
-                            configuration.default_file.to_str().unwrap(),
-                            def,
-                            why
-                        ));
-                    };
-                    match def.as_str() {
-                        "process_priority" => {
-                            if let Some(pri) = ProcessPriority::new(parm.as_integer()) {
-                                configuration.defaults.process_priority.value = pri;
-                            } else {
-                                parm_err("out of bounds");
-                            }
-                        }
-                        "default_compatibility_level" => {
-                            if let Ok(lev) = CompatibilityLevel::from_str(parm.as_enum_variant()) {
-                                configuration.defaults.default_compatibility_level.value = lev;
-                            } else {
-                                parm_err("not a known compatibility level");
-                            }
-                        }
-                        "realtic_clock_rate" => {
-                            if let Some(rate) = PositiveInt::new(parm.as_integer()) {
-                                configuration.defaults.realtic_clock_rate.value = rate;
-                            } else {
-                                parm_err("out of bounds");
-                            }
-                        }
-                        "menu_background" => {
-                            configuration.defaults.menu_background.value = parm.as_bool()
-                        }
-                        "body_queue_size" => {
-                            if parm.is_enum_variant() {
-                                if parm.as_enum_variant() == "NoLimit" {
-                                    configuration.defaults.body_queue_size.value =
-                                        OptionalLimit::NoLimit;
-                                } else {
-                                    parm_err("not a valid optional limit (can be 'NoLimit' or an integer limit)");
-                                }
-                            } else {
-                                configuration.defaults.body_queue_size.value = OptionalLimit::Limit(
-                                    PositiveInt::new(parm.as_integer())
-                                        .unwrap_or_else(|| parm_err("out of bounds")),
-                                );
-                            }
-                        }
-                        "weapon_attack_alignment" => {}
-                        "player_helpers" => {}
-                        "friend_distance" => {}
-                        _ => {
-                            lprint!(
-                                OutputLevel::WARN,
-                                "Skipping unknown config key {}.\n",
-                                String::from_utf8_lossy(def.as_bytes())
-                            );
-                        }
-                    }
-                }
-            }
-            if let Ok(b"") = r.fill_buf() {
-                break;
-            }
-        }
+        //         //     let def = String::from_utf8_lossy(def.as_bytes()).to_string();
+
+        //         //     let parm_is_valid = Defaults::get_basic_validator(&def)(&parm);
+        //         //     if !parm_is_valid {
+        //         //         crate::error(format!(
+        //         //             "Error: in {}: value for {} is wrong type",
+        //         //             fname, def
+        //         //         ));
+        //         //     }
+        //         //     let parm_err = |why: &str| -> ! {
+        //         //         crate::error(format!("Error: in {}: value for {} is {}", fname, def, why));
+        //         //     };
+        //         //     let mut defaults = &mut configuration.defaults;
+        //         //     match def.as_str() {
+        //         //         "process_priority" => {
+        //         //             if let Some(pri) = ProcessPriority::new(parm.as_integer()) {
+        //         //                 defaults.process_priority = pri;
+        //         //             } else {
+        //         //                 parm_err("out of bounds");
+        //         //             }
+        //         //         }
+        //         //         "default_compatibility_level" => {
+        //         //             if let Ok(lev) = CompatibilityLevel::from_str(parm.as_enum_variant()) {
+        //         //                 defaults.default_compatibility_level = lev;
+        //         //             } else {
+        //         //                 parm_err("not a known compatibility level");
+        //         //             }
+        //         //         }
+        //         //         "realtic_clock_rate" => {
+        //         //             if let Some(rate) = PositiveInt::new(parm.as_integer()) {
+        //         //                 defaults.realtic_clock_rate = rate;
+        //         //             } else {
+        //         //                 parm_err("out of bounds");
+        //         //             }
+        //         //         }
+        //         //         "menu_background" => defaults.menu_background = parm.as_bool(),
+        //         //         "body_queue_size" => {
+        //         //             if parm.is_enum_variant() {
+        //         //                 if parm.as_enum_variant() == "NoLimit" {
+        //         //                     defaults.body_queue_size = OptionalLimit::NoLimit;
+        //         //                 } else {
+        //         //                     parm_err("not a valid optional limit (can be 'NoLimit' or an integer limit)");
+        //         //                 }
+        //         //             } else {
+        //         //                 defaults.body_queue_size = OptionalLimit::Limit(
+        //         //                     PositiveInt::new(parm.as_integer())
+        //         //                         .unwrap_or_else(|| parm_err("out of bounds")),
+        //         //                 );
+        //         //             }
+        //         //         }
+        //         //         "weapon_attack_alignment" => {}
+        //         //         "player_helpers" => {}
+        //         //         "friend_distance" => {}
+        //         //         _ => {
+        //         //             lprint!(
+        //         //                 OutputLevel::WARN,
+        //         //                 "Skipping unknown config key {}.\n",
+        //         //                 String::from_utf8_lossy(def.as_bytes())
+        //         //             );
+        //         //         }
+        //         //     }
+        //         // }
+        //     }
+        //     if let Ok(b"") = r.fill_buf() {
+        //         break;
+        //     }
+        // }
     }
 }

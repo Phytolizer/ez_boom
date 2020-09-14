@@ -109,47 +109,48 @@ impl Default for Configuration {
 
             default_file: doom_exe_dir().join(misc::BOOM_CFG),
 
-            weapon_recoil: defaults.weapon_recoil.value,
-            player_bobbing: defaults.player_bobbing.value,
-            variable_friction: defaults.variable_friction.value,
+            weapon_recoil: defaults.weapon_recoil,
+            player_bobbing: defaults.player_bobbing,
+            variable_friction: defaults.variable_friction,
         }
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Serialize, Deserialize)]
 pub(crate) struct Defaults {
-    pub process_priority: DefaultValue<ProcessPriority>,
-    pub default_compatibility_level: DefaultValue<CompatibilityLevel>,
-    pub realtic_clock_rate: DefaultValue<PositiveInt>,
-    pub menu_background: DefaultValue<bool>,
-    pub body_queue_size: DefaultValue<OptionalLimit>,
-    pub flashing_hom: DefaultValue<bool>,
-    pub demo_insurance: DefaultValue<DemoInsurance>,
-    pub endoom_mode: DefaultValue<EndoomMode>,
-    pub level_precache: DefaultValue<bool>,
-    pub demo_smoothturns: DefaultValue<DemoSmoothTurns>,
-    pub boom_autoswitch: DefaultValue<bool>,
-    pub wad_files: DefaultValue<Vec<PathBuf>>,
-    pub deh_files: DefaultValue<Vec<PathBuf>>,
-    pub default_skill: DefaultValue<SkillLevel>,
-    pub weapon_recoil: DefaultValue<bool>,
-    pub doom_weapon_toggles: DefaultValue<bool>,
-    pub player_bobbing: DefaultValue<bool>,
-    pub weapon_attack_alignment: DefaultValue<WeaponAttackAlignment>,
-    pub monsters_remember: DefaultValue<bool>,
-    pub monster_infighting: DefaultValue<MonsterInfightingLevel>,
-    pub monster_backing: DefaultValue<bool>,
-    pub monster_avoid_hazards: DefaultValue<bool>,
-    pub monkeys: DefaultValue<bool>,
-    pub monster_friction: DefaultValue<bool>,
-    pub help_friends: DefaultValue<bool>,
-    pub allow_pushers: DefaultValue<bool>,
-    pub variable_friction: DefaultValue<bool>,
-    pub player_helpers: DefaultValue<PlayerHelpers>,
-    pub friend_distance: DefaultValue<FriendDistance>,
-    pub dog_jumping: DefaultValue<bool>,
-    pub sts_always_red: DefaultValue<bool>,
-    pub sts_pct_always_gray: DefaultValue<bool>,
+    #[serde(default = "default_process_priority")]
+    pub process_priority: ProcessPriority,
+    pub default_compatibility_level: CompatibilityLevel,
+    pub realtic_clock_rate: PositiveInt,
+    pub menu_background: bool,
+    pub body_queue_size: OptionalLimit,
+    pub flashing_hom: bool,
+    pub demo_insurance: DemoInsurance,
+    pub endoom_mode: EndoomMode,
+    pub level_precache: bool,
+    pub demo_smoothturns: DemoSmoothTurns,
+    pub boom_autoswitch: bool,
+    pub wad_files: Vec<PathBuf>,
+    pub deh_files: Vec<PathBuf>,
+    pub default_skill: SkillLevel,
+    pub weapon_recoil: bool,
+    pub doom_weapon_toggles: bool,
+    pub player_bobbing: bool,
+    pub weapon_attack_alignment: WeaponAttackAlignment,
+    pub monsters_remember: bool,
+    pub monster_infighting: MonsterInfightingLevel,
+    pub monster_backing: bool,
+    pub monster_avoid_hazards: bool,
+    pub monkeys: bool,
+    pub monster_friction: bool,
+    pub help_friends: bool,
+    pub allow_pushers: bool,
+    pub variable_friction: bool,
+    pub player_helpers: PlayerHelpers,
+    pub friend_distance: FriendDistance,
+    pub dog_jumping: bool,
+    pub sts_always_red: bool,
+    pub sts_pct_always_gray: bool,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -158,22 +159,10 @@ pub struct DefaultsOpt {
     pub default_compatibility_level: Option<CompatibilityLevel>,
 }
 
-macro_rules! default_values {
-    (
-        $sname:tt {
-            $($name:ident: $value:expr,)*
-        }
-    ) => {
-        $sname {
-            $($name : DefaultValue{name: stringify!($name), value:$value},)*
-        }
-    };
-}
-
 impl Default for Defaults {
     fn default() -> Self {
-        default_values!(Self {
-            process_priority: ProcessPriority::new(0).unwrap(),
+        Self {
+            process_priority: default_process_priority(),
             default_compatibility_level: CompatibilityLevel::PrBoomLatest,
             realtic_clock_rate: PositiveInt::new(100).unwrap(),
             menu_background: true,
@@ -212,32 +201,36 @@ impl Default for Defaults {
             dog_jumping: true,
             sts_always_red: true,
             sts_pct_always_gray: false,
-        })
-    }
-}
-
-impl Defaults {
-    pub fn get_basic_validator(key: &str) -> fn(&ConfigParam) -> bool {
-        match key {
-            "process_priority" => ConfigParam::is_integer,
-            "default_compatibility_level" => ConfigParam::is_enum_variant,
-            "realtic_clock_rate" => ConfigParam::is_integer,
-            "menu_background" => ConfigParam::is_bool,
-            "body_queue_size" => |p| p.is_integer() || p.is_enum_variant(),
-            "flashing_hom" => ConfigParam::is_bool,
-            "demo_insurance" => ConfigParam::is_enum_variant,
-            "endoom_mode" => ConfigParam::is_integer,
-            "level_precache" => ConfigParam::is_bool,
-            _ => |_| true,
         }
     }
 }
 
-#[derive(Debug, Clone)]
-pub(crate) struct DefaultValue<T> {
-    pub name: &'static str,
-    pub value: T,
+fn default_process_priority() -> ProcessPriority {
+    ProcessPriority::new(0).unwrap()
 }
+
+// impl Defaults {
+//     pub fn get_basic_validator(key: &str) -> fn(&ConfigParam) -> bool {
+//         match key {
+//             "process_priority" => ConfigParam::is_integer,
+//             "default_compatibility_level" => ConfigParam::is_enum_variant,
+//             "realtic_clock_rate" => ConfigParam::is_integer,
+//             "menu_background" => ConfigParam::is_bool,
+//             "body_queue_size" => |p| p.is_integer() || p.is_enum_variant(),
+//             "flashing_hom" => ConfigParam::is_bool,
+//             "demo_insurance" => ConfigParam::is_enum_variant,
+//             "endoom_mode" => ConfigParam::is_integer,
+//             "level_precache" => ConfigParam::is_bool,
+//             _ => |_| true,
+//         }
+//     }
+// }
+
+// #[derive(Debug, Clone)]
+// pub(crate) struct DefaultValue<T> {
+//     pub name: &'static str,
+//     pub value: T,
+// }
 
 #[derive(Debug, Copy, Clone, EnumString, Serialize, Deserialize)]
 pub enum CompatibilityLevel {
@@ -267,40 +260,6 @@ impl Default for CompatibilityLevel {
     }
 }
 
-#[derive(Debug)]
-pub struct BoundedInt<T>
-where
-    T: PartialOrd + Copy,
-{
-    bounds: Range<T>,
-    value: T,
-}
-
-impl<T> BoundedInt<T>
-where
-    T: PartialOrd + Copy,
-{
-    pub fn new(bounds: Range<T>, value: T) -> BoundedInt<T> {
-        if !bounds.contains(&value) {
-            panic!("value out of range");
-        }
-        Self { bounds, value }
-    }
-
-    pub fn set(&mut self, value: T) -> Result<(), ()> {
-        if self.bounds.contains(&value) {
-            self.value = value;
-            Ok(())
-        } else {
-            Err(())
-        }
-    }
-
-    pub fn get(&self) -> T {
-        self.value
-    }
-}
-
 bounded_integer! {
     #[repr(i32)]
     #[derive(Serialize, Deserialize)]
@@ -315,23 +274,24 @@ impl Default for ProcessPriority {
 
 bounded_integer! {
     #[repr(i32)]
+    #[derive(Serialize, Deserialize)]
     pub struct PositiveInt { 0..std::i32::MAX }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Serialize, Deserialize)]
 pub enum OptionalLimit {
     NoLimit,
     Limit(PositiveInt),
 }
 
-#[derive(Debug, Copy, Clone)]
+#[derive(Debug, Copy, Clone, Serialize, Deserialize)]
 pub enum DemoInsurance {
     None,
     Always,
     DuringDemoRecording,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Serialize, Deserialize)]
 pub struct DemoSmoothTurns {
     pub enabled: bool,
     pub factor: SmoothTurnsFactor,
@@ -339,14 +299,16 @@ pub struct DemoSmoothTurns {
 
 bounded_integer! {
     #[repr(i32)]
+    #[derive(Serialize, Deserialize)]
     pub struct SmoothTurnsFactor { 1..=16 }
 }
 bounded_integer! {
     #[repr(i32)]
+    #[derive(Serialize, Deserialize)]
     pub struct WeaponAttackAlignment { 0..=3 }
 }
 
-#[derive(Debug, Copy, Clone)]
+#[derive(Debug, Copy, Clone, Serialize, Deserialize)]
 pub enum SkillLevel {
     None,
     Itytd,
@@ -388,7 +350,7 @@ impl Display for SkillLevel {
     }
 }
 
-#[derive(Debug, Copy, Clone)]
+#[derive(Debug, Copy, Clone, Serialize, Deserialize)]
 pub enum MonsterInfightingLevel {
     None,
     OtherSpecies,
@@ -397,10 +359,12 @@ pub enum MonsterInfightingLevel {
 
 bounded_integer! {
     #[repr(i32)]
+    #[derive(Serialize, Deserialize)]
     pub struct PlayerHelpers { 0..=3 }
 }
 bounded_integer! {
     #[repr(i32)]
+    #[derive(Serialize, Deserialize)]
     pub struct FriendDistance { 0..1000 }
 }
 
@@ -509,7 +473,7 @@ pub enum AnisotropicFilter {
     On16x,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Serialize, Deserialize)]
 pub struct EndoomMode {
     pub colors: bool,
     pub non_ascii_chars: bool,
