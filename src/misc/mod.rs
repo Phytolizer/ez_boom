@@ -14,7 +14,7 @@ use std::{
 use args::ArgList;
 
 use crate::configuration::{self, Configuration, Defaults, PositiveInt};
-use configuration::CompatibilityLevel;
+use configuration::{CompatibilityLevel, OptionalLimit};
 
 pub(crate) mod args;
 pub(crate) mod fixed;
@@ -211,7 +211,6 @@ pub(crate) fn load_defaults(configuration: &mut Configuration) {
                         )
                     };
 
-                    dbg!(&parm);
                     let def = String::from_utf8_lossy(def.as_bytes()).to_string();
 
                     let parm_is_valid = Defaults::get_basic_validator(&def)(&parm);
@@ -248,6 +247,26 @@ pub(crate) fn load_defaults(configuration: &mut Configuration) {
                         "realtic_clock_rate" => {
                             if let Some(rate) = PositiveInt::new(parm.as_integer()) {
                                 configuration.defaults.realtic_clock_rate.value = rate;
+                            } else {
+                                parm_err("out of bounds");
+                            }
+                        }
+                        "menu_background" => {
+                            configuration.defaults.menu_background.value = parm.as_bool()
+                        }
+                        "body_queue_size" => {
+                            if parm.is_enum_variant() {
+                                if parm.as_enum_variant() == "NoLimit" {
+                                    configuration.defaults.body_queue_size.value =
+                                        OptionalLimit::NoLimit;
+                                } else {
+                                    parm_err("not a valid optional limit (can be 'NoLimit' or an integer limit)");
+                                }
+                            } else {
+                                configuration.defaults.body_queue_size.value = OptionalLimit::Limit(
+                                    PositiveInt::new(parm.as_integer())
+                                        .unwrap_or_else(|| parm_err("out of bounds")),
+                                );
                             }
                         }
                         "weapon_attack_alignment" => {}
@@ -256,7 +275,7 @@ pub(crate) fn load_defaults(configuration: &mut Configuration) {
                         _ => {
                             lprint!(
                                 OutputLevel::WARN,
-                                "Skipping unknown config key {}.",
+                                "Skipping unknown config key {}.\n",
                                 String::from_utf8_lossy(def.as_bytes())
                             );
                         }

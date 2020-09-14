@@ -22,7 +22,9 @@ serde_derive = "1.0"
 serde_yaml = "0.8"
 dirs = "3.0"
 shrinkwraprs = "0.3"
-enum-utils = "0.1"
+rustc-hash = "1.1"
+strum = "0.19"
+strum_macros = "0.19"
 
 [build-dependencies]
 chrono = "0.4"

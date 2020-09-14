@@ -6,6 +6,7 @@ use crate::{
 };
 use lazy_static::lazy_static;
 use parking_lot::RwLock;
+use strum::IntoEnumIterator;
 
 // TODO delete these dumb statics
 lazy_static! {
@@ -50,15 +51,17 @@ pub fn build_bex_tables() {
         SOUNDNAMES.write()[i] = sfx.name;
     }
     // set dropped items for enemies that drop items
-    // TODO remove this variable
-    let upper_bound_remove_me = MOBJINFO.read().len();
-    for i in 0..upper_bound_remove_me {
-        let mobj = &mut MOBJINFO.write()[i];
-        if i == MobjType::WOLFSS as usize || i == MobjType::POSSESSED as usize {
+    let mut mobjinfo = MOBJINFO.write();
+    for i in MobjType::iter() {
+        let mobj = match mobjinfo.get_mut(&i) {
+            Some(v) => v,
+            None => continue,
+        };
+        if i == MobjType::WOLFSS || i == MobjType::POSSESSED {
             mobj.droppeditem = MobjType::CLIP;
-        } else if i == MobjType::SHOTGUY as usize {
+        } else if i == MobjType::SHOTGUY {
             mobj.droppeditem = MobjType::SHOTGUN;
-        } else if i == MobjType::CHAINGUY as usize {
+        } else if i == MobjType::CHAINGUY {
             mobj.droppeditem = MobjType::CHAINGUN;
         } else {
             mobj.droppeditem = MobjType::NULL;

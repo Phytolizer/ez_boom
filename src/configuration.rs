@@ -2,7 +2,9 @@
 
 use bounded_integer::bounded_integer;
 use ops::Range;
+use serde_derive::{Deserialize, Serialize};
 use std::{convert::TryFrom, env, fmt::Display, ops, path::PathBuf};
+use strum_macros::EnumString;
 
 use crate::{
     doom::def::GameMission,
@@ -150,6 +152,12 @@ pub(crate) struct Defaults {
     pub sts_pct_always_gray: DefaultValue<bool>,
 }
 
+#[derive(Debug, Serialize, Deserialize)]
+pub struct DefaultsOpt {
+    pub process_priority: Option<ProcessPriority>,
+    pub default_compatibility_level: Option<CompatibilityLevel>,
+}
+
 macro_rules! default_values {
     (
         $sname:tt {
@@ -213,6 +221,13 @@ impl Defaults {
         match key {
             "process_priority" => ConfigParam::is_integer,
             "default_compatibility_level" => ConfigParam::is_enum_variant,
+            "realtic_clock_rate" => ConfigParam::is_integer,
+            "menu_background" => ConfigParam::is_bool,
+            "body_queue_size" => |p| p.is_integer() || p.is_enum_variant(),
+            "flashing_hom" => ConfigParam::is_bool,
+            "demo_insurance" => ConfigParam::is_enum_variant,
+            "endoom_mode" => ConfigParam::is_integer,
+            "level_precache" => ConfigParam::is_bool,
             _ => |_| true,
         }
     }
@@ -224,7 +239,7 @@ pub(crate) struct DefaultValue<T> {
     pub value: T,
 }
 
-#[derive(Debug, Copy, Clone, enum_utils::FromStr)]
+#[derive(Debug, Copy, Clone, EnumString, Serialize, Deserialize)]
 pub enum CompatibilityLevel {
     DoomV12,
     DoomV1666,
@@ -288,6 +303,7 @@ where
 
 bounded_integer! {
     #[repr(i32)]
+    #[derive(Serialize, Deserialize)]
     pub struct ProcessPriority { 0..=2 }
 }
 

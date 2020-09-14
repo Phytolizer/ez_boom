@@ -2,6 +2,7 @@ use bitflags::bitflags;
 
 bitflags! {
     pub(crate) struct MobjFlag: u64 {
+        const NONE = 0x0;
         /// Calls mobj::special_thing() when touched!
         const SPECIAL = 0x1;
         /// Blocks other things.
@@ -91,5 +92,11 @@ bitflags! {
         const NOTARGET = 0x10000000000;
         /// fly mode active
         const FLY = 0x20000000000;
+    }
+}
+
+impl Into<u64> for MobjFlag {
+    fn into(self) -> u64 {
+        self.bits
     }
 }

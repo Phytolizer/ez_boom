@@ -100,7 +100,13 @@ fn print_version() {
     lprint!(OutputLevel::INFO, "{}\n", system::version_string());
 }
 
+fn init_statics() {
+    info::init_mobjinfo();
+}
+
 fn main() {
+    init_statics();
+
     let mut configuration = read_configuration();
     read_args(&mut configuration);
     print_version();
@@ -504,7 +510,7 @@ fn check_iwad<P: AsRef<Path>>(configuration: &mut Configuration, iwad: P) {
     let mut secret_levels = 0;
     // Hacx
     let mut hacx_levels = 0;
-    // ?
+    // Chex Quest
     let mut cq = 0;
     while length > 0 {
         length -= 1;
@@ -711,24 +717,6 @@ fn find_file_internal(name: &str, ext: &str, is_static: bool) -> Option<PathBuf>
         }
     }
     None
-}
-
-#[cfg(windows)]
-fn has_trailing_slash(s: &str) -> bool {
-    s.ends_with('\\')
-}
-
-#[cfg(not(windows))]
-fn has_trailing_slash(s: &str) -> bool {
-    s.ends_with('/')
-}
-
-fn normalize_slashes(path: &mut String) {
-    *path = fs::canonicalize(&path)
-        .unwrap()
-        .to_str()
-        .unwrap()
-        .to_string();
 }
 
 fn setup_console_masks(configuration: &Configuration) {

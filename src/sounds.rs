@@ -129,6 +129,7 @@ pub(crate) enum Music {
 }
 
 #[allow(dead_code)]
+#[repr(usize)]
 pub(crate) enum Sfx {
     None,
     PISTOL,
@@ -252,6 +253,12 @@ pub(crate) enum Sfx {
     GIBDTH,
 
     NUMSFX,
+}
+
+impl Into<usize> for Sfx {
+    fn into(self) -> usize {
+        self as usize
+    }
 }
 
 pub(crate) const MUSIC: [MusicInfo; Music::NUMMUSIC as usize + 1] = [
