@@ -13,10 +13,10 @@ Information about which args were passed on the command line.
 Related to but not identical to RuntimeConfig.
 **/
 #[derive(Debug, Serialize, Deserialize)]
-pub(crate) struct ArgMeta {
-    pub(crate) nomonsters: bool,
-    pub(crate) respawnparm: bool,
-    pub(crate) fastparm: bool,
+pub struct ArgMeta {
+    pub nomonsters: bool,
+    pub respawnparm: bool,
+    pub fastparm: bool,
 }
 
 impl Default for ArgMeta {
@@ -29,9 +29,9 @@ impl Default for ArgMeta {
     }
 }
 
-pub(crate) type Args = Vec<String>;
+pub type Args = Vec<String>;
 
-pub(crate) trait ArgList {
+pub trait ArgList {
     /// Check for the existence of `check`. If it exists, this returns
     /// `Some(i)`, where `i` is the index into `self` where the arg is
     /// located. If the arg is not found, it returns `None`.

@@ -75,7 +75,7 @@ counted_array!(
 );
 
 /// Print an error and quit the program.
-pub(crate) fn error<S: AsRef<str>>(why: S) -> ! {
+pub fn error<S: AsRef<str>>(why: S) -> ! {
     lprint!(OutputLevel::ERROR, "{}\n", why.as_ref());
     std::process::exit(-1);
 }
@@ -354,7 +354,7 @@ fn doom_main_setup(configuration: &mut Configuration) {
 
 fn identify_version(configuration: &mut Configuration) {
     configuration.save_game_base = env::var("DOOMSAVEDIR")
-        .map(|d| PathBuf::from(d))
+        .map(PathBuf::from)
         .unwrap_or_else(|_| doom_exe_dir());
     if let Some(i) = configuration.args.check_parm("-save") {
         if i < configuration.args.len() - 1 {

@@ -7,17 +7,17 @@ use rustc_hash::FxHashMap;
 use strum_macros::EnumIter;
 
 lazy_static! {
-    pub(crate) static ref STATES: RwLock<Vec<State>> =
+    pub static ref STATES: RwLock<Vec<State>> =
         RwLock::new(vec![State::default(); Statenum::NumStates as usize]);
 }
 
 #[derive(Copy, Clone)]
-pub(crate) struct State {
-    pub(crate) sprite: Spritenum,
-    pub(crate) frame: i64,
-    pub(crate) tics: i64,
-    pub(crate) action: crate::think::ActionF,
-    pub(crate) nextstate: usize,
+pub struct State {
+    pub sprite: Spritenum,
+    pub frame: i64,
+    pub tics: i64,
+    pub action: crate::think::ActionF,
+    pub nextstate: usize,
 }
 
 impl Default for State {
@@ -34,34 +34,35 @@ impl Default for State {
 
 #[allow(dead_code)]
 #[derive(Debug)]
-pub(crate) struct MobjInfo {
-    pub(crate) doomednum: i32,
-    pub(crate) spawnstate: usize,
-    pub(crate) spawnhealth: i32,
-    pub(crate) seestate: usize,
-    pub(crate) seesound: usize,
-    pub(crate) reactiontime: i32,
-    pub(crate) attacksound: usize,
-    pub(crate) painstate: usize,
-    pub(crate) painchance: i32,
-    pub(crate) painsound: usize,
-    pub(crate) meleestate: usize,
-    pub(crate) missilestate: usize,
-    pub(crate) deathstate: usize,
-    pub(crate) xdeathstate: usize,
-    pub(crate) deathsound: usize,
-    pub(crate) speed: i32,
-    pub(crate) radius: i32,
-    pub(crate) height: i32,
-    pub(crate) mass: i32,
-    pub(crate) damage: i32,
-    pub(crate) activesound: usize,
-    pub(crate) flags: u64,
-    pub(crate) raisestate: usize,
-    pub(crate) droppeditem: MobjType,
+pub struct MobjInfo {
+    pub doomednum: i32,
+    pub spawnstate: usize,
+    pub spawnhealth: i32,
+    pub seestate: usize,
+    pub seesound: usize,
+    pub reactiontime: i32,
+    pub attacksound: usize,
+    pub painstate: usize,
+    pub painchance: i32,
+    pub painsound: usize,
+    pub meleestate: usize,
+    pub missilestate: usize,
+    pub deathstate: usize,
+    pub xdeathstate: usize,
+    pub deathsound: usize,
+    pub speed: i32,
+    pub radius: i32,
+    pub height: i32,
+    pub mass: i32,
+    pub damage: i32,
+    pub activesound: usize,
+    pub flags: u64,
+    pub raisestate: usize,
+    pub droppeditem: MobjType,
 }
 
 impl MobjInfo {
+    #[allow(clippy::too_many_arguments)]
     fn new<U1, U2, U3, U4, U5, U6, U7, U8, U9, U10, U11, U12, U13, F>(
         doomednum: i32,
         spawnstate: U1,
@@ -135,7 +136,7 @@ impl MobjInfo {
 
 #[allow(dead_code)]
 #[derive(Copy, Clone, Debug, Eq, PartialEq)]
-pub(crate) enum Spritenum {
+pub enum Spritenum {
     TROO,
     SHTG,
     PUNG,
@@ -388,7 +389,7 @@ pub(crate) enum Spritenum {
 #[allow(non_camel_case_types, dead_code)]
 #[repr(usize)]
 #[derive(Copy, Clone, Eq, PartialEq)]
-pub(crate) enum Statenum {
+pub enum Statenum {
     NULL,
     LIGHTDONE,
     PUNCH,
@@ -1460,7 +1461,7 @@ impl Into<usize> for Statenum {
 
 #[repr(i32)]
 #[derive(Debug, Eq, PartialEq, Hash, Copy, Clone, EnumIter)]
-pub(crate) enum MobjType {
+pub enum MobjType {
     NULL = -1, // null/invalid mobj (zero is reserved for MT_PLAYER)
     PLAYER,
     POSSESSED,
@@ -1730,7 +1731,7 @@ pub(crate) enum MobjType {
     NUMMOBJTYPES, // Counter of how many there are
 }
 
-pub(crate) const SPRNAMES: [&str; Spritenum::NumSprites as usize + 1] = [
+pub const SPRNAMES: [&str; Spritenum::NumSprites as usize + 1] = [
     "TROO", "SHTG", "PUNG", "PISG", "PISF", "SHTF", "SHT2", "CHGG", "CHGF", "MISG", "MISF", "SAWG",
     "PLSG", "PLSF", "BFGG", "BFGF", "BLUD", "PUFF", "BAL1", "BAL2", "PLSS", "PLSE", "MISL", "BFS1",
     "BFE1", "BFE2", "TFOG", "IFOG", "PLAY", "POSS", "SPOS", "VILE", "FIRE", "FATB", "FBXP", "SKEL",
@@ -1756,7 +1757,7 @@ pub(crate) const SPRNAMES: [&str; Spritenum::NumSprites as usize + 1] = [
 ];
 
 lazy_static! {
-    pub(crate) static ref MOBJINFO: RwLock<FxHashMap<MobjType, MobjInfo>> =
+    pub static ref MOBJINFO: RwLock<FxHashMap<MobjType, MobjInfo>> =
         RwLock::new(FxHashMap::default());
 }
 

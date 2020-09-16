@@ -1,13 +1,13 @@
 #[allow(dead_code)]
-pub(crate) struct MusicInfo {
-    pub(crate) name: &'static str,
-    pub(crate) lumpnum: i32,
-    pub(crate) data: Vec<u8>,
-    pub(crate) handle: i32,
+pub struct MusicInfo {
+    pub name: &'static str,
+    pub lumpnum: i32,
+    pub data: Vec<u8>,
+    pub handle: i32,
 }
 
 impl MusicInfo {
-    pub(crate) const fn new(name: &'static str) -> Self {
+    pub const fn new(name: &'static str) -> Self {
         Self {
             name,
             lumpnum: 0,
@@ -18,20 +18,20 @@ impl MusicInfo {
 }
 
 #[allow(dead_code)]
-pub(crate) struct SfxInfo {
-    pub(crate) name: &'static str,
-    pub(crate) singularity: bool,
-    pub(crate) priority: i32,
-    pub(crate) link: Option<usize>,
-    pub(crate) pitch: i32,
-    pub(crate) volume: i32,
-    pub(crate) data: Vec<u8>,
-    pub(crate) usefulness: i32,
-    pub(crate) lumpnum: i32,
+pub struct SfxInfo {
+    pub name: &'static str,
+    pub singularity: bool,
+    pub priority: i32,
+    pub link: Option<usize>,
+    pub pitch: i32,
+    pub volume: i32,
+    pub data: Vec<u8>,
+    pub usefulness: i32,
+    pub lumpnum: i32,
 }
 
 impl SfxInfo {
-    pub(crate) const fn new(
+    pub const fn new(
         name: &'static str,
         singularity: bool,
         priority: i32,
@@ -55,7 +55,7 @@ impl SfxInfo {
 }
 
 #[allow(non_camel_case_types, dead_code)]
-pub(crate) enum Music {
+pub enum Music {
     None,
     E1M1,
     E1M2,
@@ -130,7 +130,7 @@ pub(crate) enum Music {
 
 #[allow(dead_code)]
 #[repr(usize)]
-pub(crate) enum Sfx {
+pub enum Sfx {
     None,
     PISTOL,
     SHOTGN,
@@ -261,7 +261,7 @@ impl Into<usize> for Sfx {
     }
 }
 
-pub(crate) const MUSIC: [MusicInfo; Music::NUMMUSIC as usize + 1] = [
+pub const MUSIC: [MusicInfo; Music::NUMMUSIC as usize + 1] = [
     MusicInfo::new(""),
     MusicInfo::new("e1m1"),
     MusicInfo::new("e1m2"),
@@ -334,7 +334,7 @@ pub(crate) const MUSIC: [MusicInfo; Music::NUMMUSIC as usize + 1] = [
     MusicInfo::new("musinfo"),
 ];
 
-pub(crate) const SFX: [SfxInfo; Sfx::NUMSFX as usize] = [
+pub const SFX: [SfxInfo; Sfx::NUMSFX as usize] = [
     SfxInfo::new("none", false, 0, None, -1, -1, vec![]),
     SfxInfo::new("pistol", false, 64, None, -1, -1, vec![]),
     SfxInfo::new("shotgn", false, 64, None, -1, -1, vec![]),

@@ -4,27 +4,27 @@ use serde_derive::{Deserialize, Serialize};
 use std::{io, mem, path::Path, path::PathBuf};
 
 #[derive(Debug)]
-pub(crate) struct WadInfo {
-    pub(crate) identification: [u8; 4],
-    pub(crate) numlumps: i32,
-    pub(crate) infotableofs: i32,
+pub struct WadInfo {
+    pub identification: [u8; 4],
+    pub numlumps: i32,
+    pub infotableofs: i32,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
-pub(crate) struct WadFileInfo {
-    pub(crate) name: PathBuf,
-    pub(crate) src: WadSource,
-    pub(crate) handle: i32,
+pub struct WadFileInfo {
+    pub name: PathBuf,
+    pub src: WadSource,
+    pub handle: i32,
 }
 
 #[derive(Debug)]
-pub(crate) struct FileLump {
-    pub(crate) filepos: i32,
-    pub(crate) size: i32,
-    pub(crate) name: [u8; 8],
+pub struct FileLump {
+    pub filepos: i32,
+    pub size: i32,
+    pub name: [u8; 8],
 }
 
-pub(crate) trait ReadWadExt {
+pub trait ReadWadExt {
     fn read_wadinfo(&mut self) -> Result<WadInfo, io::Error>;
     fn read_filelump(&mut self) -> Result<FileLump, io::Error>;
 }
@@ -55,7 +55,7 @@ where
 
 #[allow(dead_code)]
 #[derive(Debug, Copy, Clone, Serialize, Deserialize)]
-pub(crate) enum WadSource {
+pub enum WadSource {
     Iwad = 0,
     Pre,
     AutoLoad,
@@ -66,7 +66,7 @@ pub(crate) enum WadSource {
     Err,
 }
 
-pub(crate) fn add_default_extension<P: AsRef<Path>>(path: P, ext: &str) -> PathBuf {
+pub fn add_default_extension<P: AsRef<Path>>(path: P, ext: &str) -> PathBuf {
     let path = path.as_ref().to_str().unwrap();
     let pb = path.as_bytes();
     let mut p = path.len();

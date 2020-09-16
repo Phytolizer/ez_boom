@@ -10,13 +10,13 @@ use strum::IntoEnumIterator;
 
 // TODO delete these dumb statics
 lazy_static! {
-    pub(crate) static ref CODEPTR: RwLock<[ActionF; Statenum::NumStates as usize]> =
+    pub static ref CODEPTR: RwLock<[ActionF; Statenum::NumStates as usize]> =
         RwLock::new([|| (); Statenum::NumStates as usize]);
-    pub(crate) static ref SPRITENAMES: RwLock<[&'static str; Spritenum::NumSprites as usize + 1]> =
+    pub static ref SPRITENAMES: RwLock<[&'static str; Spritenum::NumSprites as usize + 1]> =
         RwLock::new([""; Spritenum::NumSprites as usize + 1]);
-    pub(crate) static ref MUSICNAMES: RwLock<[&'static str; Music::NUMMUSIC as usize + 1]> =
+    pub static ref MUSICNAMES: RwLock<[&'static str; Music::NUMMUSIC as usize + 1]> =
         RwLock::new([""; Music::NUMMUSIC as usize + 1]);
-    pub(crate) static ref SOUNDNAMES: RwLock<[&'static str; Sfx::NUMSFX as usize + 1]> =
+    pub static ref SOUNDNAMES: RwLock<[&'static str; Sfx::NUMSFX as usize + 1]> =
         RwLock::new([""; Sfx::NUMSFX as usize + 1]);
 }
 

@@ -1,1 +1,1 @@
-pub(crate) mod mobj;
+pub mod mobj;

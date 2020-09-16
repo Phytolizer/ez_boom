@@ -12,9 +12,9 @@ use args::ArgList;
 
 use crate::configuration::Configuration;
 
-pub(crate) mod args;
-pub(crate) mod fixed;
-pub(crate) mod lprint;
+pub mod args;
+pub mod fixed;
+pub mod lprint;
 
 pub const BOOM_CFG: &str = "ezboom.cfg";
 
@@ -26,7 +26,7 @@ pub fn read_file<P: AsRef<Path>>(file_name: P) -> Result<Vec<u8>, io::Error> {
     })
 }
 
-pub(crate) fn load_defaults(configuration: &mut Configuration) {
+pub fn load_defaults(configuration: &mut Configuration) {
     if let Some(i) = configuration.args.check_parm("-config") {
         if i < configuration.args.len() - 1 {
             configuration.default_file = PathBuf::from(&configuration.args[i + 1]);

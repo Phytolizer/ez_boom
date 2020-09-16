@@ -1,1 +1,1 @@
-pub(crate) const DEVSTR: &str = "Development mode ON.\n";
+pub const DEVSTR: &str = "Development mode ON.\n";

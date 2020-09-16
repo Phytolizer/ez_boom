@@ -15,52 +15,73 @@ use crate::{
 };
 
 #[derive(Debug)]
-pub(crate) struct Configuration {
-    pub(crate) defaults: Box<Defaults>,
+pub struct Configuration {
+    pub defaults: Box<Defaults>,
 
-    pub(crate) args: Args,
-    pub(crate) arg_meta: ArgMeta,
-    pub(crate) nomonsters: bool,
-    pub(crate) respawnparm: bool,
-    pub(crate) fastparm: bool,
-    pub(crate) devparm: bool,
+    pub args: Args,
+    pub arg_meta: ArgMeta,
+    pub nomonsters: bool,
+    pub respawnparm: bool,
+    pub fastparm: bool,
+    pub devparm: bool,
 
     // can also be 2
-    pub(crate) deathmatch: usize,
-    pub(crate) force_old_bsp: bool,
+    pub deathmatch: usize,
+    pub force_old_bsp: bool,
 
-    pub(crate) game_mode: GameMode,
-    pub(crate) game_mission: GameMission,
-    pub(crate) language: Language,
+    pub game_mode: GameMode,
+    pub game_mission: GameMission,
+    pub language: Language,
 
-    pub(crate) doom_ver_str: String,
-    pub(crate) bfg_edition: bool,
-    pub(crate) has_wolf_levels: bool,
+    pub doom_ver_str: String,
+    pub bfg_edition: bool,
+    pub has_wolf_levels: bool,
 
-    pub(crate) save_game_base: PathBuf,
-    pub(crate) start_skill: SkillLevel,
-    pub(crate) start_episode: usize,
-    pub(crate) start_map: usize,
-    pub(crate) autostart: bool,
+    pub save_game_base: PathBuf,
+    pub start_skill: SkillLevel,
+    pub start_episode: usize,
+    pub start_map: usize,
+    pub autostart: bool,
 
-    pub(crate) wad_files: Vec<WadFileInfo>,
+    pub wad_files: Vec<WadFileInfo>,
 
-    pub(crate) forward_move: [i32; 2],
-    pub(crate) side_move: [i32; 2],
+    pub forward_move: [i32; 2],
+    pub side_move: [i32; 2],
 
-    pub(crate) no_music: bool,
-    pub(crate) no_sfx: bool,
+    pub no_music: bool,
+    pub no_sfx: bool,
 
-    pub(crate) no_draw: bool,
-    pub(crate) no_blit: bool,
+    pub no_draw: bool,
+    pub no_blit: bool,
 
-    pub(crate) view_angle_offset: i32,
+    pub view_angle_offset: i32,
 
-    pub(crate) default_file: PathBuf,
+    pub default_file: PathBuf,
+    pub netgame: bool,
 
-    pub(crate) weapon_recoil: bool,
-    pub(crate) player_bobbing: bool,
-    pub(crate) variable_friction: bool,
+    pub weapon_recoil: bool,
+    pub player_bobbing: bool,
+    pub variable_friction: bool,
+    pub allow_pushers: bool,
+    pub monsters_remember: bool,
+    pub monster_infighting: MonsterInfightingLevel,
+    pub monster_backing: bool,
+    pub monster_avoid_hazards: bool,
+    pub monster_friction: bool,
+    pub dogs: PlayerHelpers,
+    pub friend_distance: FriendDistance,
+    pub help_friends: bool,
+    pub monkeys: bool,
+
+    pub demo_playback: bool,
+    pub single_demo: bool,
+    pub net_demo: bool,
+
+    pub player_in_game: Vec<bool>,
+
+    pub console_player: usize,
+
+    pub compatibility_level: CompatibilityLevel,
 }
 
 impl Default for Configuration {
@@ -106,16 +127,37 @@ impl Default for Configuration {
             view_angle_offset: 0,
 
             default_file: doom_exe_dir().join(misc::BOOM_CFG),
+            netgame: false,
 
             weapon_recoil: defaults.weapon_recoil,
             player_bobbing: defaults.player_bobbing,
             variable_friction: defaults.variable_friction,
+            allow_pushers: defaults.allow_pushers,
+            monsters_remember: defaults.monsters_remember,
+            monster_infighting: defaults.monster_infighting,
+            monster_backing: defaults.monster_backing,
+            monster_avoid_hazards: defaults.monster_avoid_hazards,
+            monster_friction: defaults.monster_friction,
+            dogs: defaults.player_helpers,
+            friend_distance: defaults.friend_distance,
+            help_friends: defaults.help_friends,
+            monkeys: defaults.monkeys,
+
+            demo_playback: false,
+            single_demo: false,
+            net_demo: false,
+
+            player_in_game: vec![true],
+
+            console_player: 0,
+
+            compatibility_level: defaults.default_compatibility_level,
         }
     }
 }
 
 #[derive(Debug, Serialize, Deserialize, Default)]
-pub(crate) struct Defaults {
+pub struct Defaults {
     #[serde(default = "default_process_priority")]
     pub process_priority: ProcessPriority,
     #[serde(default = "default_default_compatibility_level")]
@@ -2765,7 +2807,7 @@ bounded_integer! {
     pub struct WeaponAttackAlignment { 0..=3 }
 }
 
-#[derive(Debug, Copy, Clone, Serialize, Deserialize)]
+#[derive(Debug, Copy, Clone, Serialize, Deserialize, PartialEq)]
 pub enum SkillLevel {
     None,
     Itytd,
