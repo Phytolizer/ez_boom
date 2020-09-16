@@ -1,20 +1,16 @@
-use crate::configuration::ProcessPriority;
-use crate::lprint;
-use crate::misc::lprint::OutputLevel;
-use regex::bytes::Regex;
-use std::str::FromStr;
+use crate::{defs::PACKAGE_TARNAME, lprint, wad::WadFileInfo};
+use crate::{misc::lprint::OutputLevel, wad::WadSource};
 use std::{
     fs,
     fs::File,
-    io::{self, BufRead, BufReader, Read},
+    io::{self, Read},
     path::Path,
     path::PathBuf,
 };
 
 use args::ArgList;
 
-use crate::configuration::{self, Configuration, Defaults, PositiveInt};
-use configuration::{CompatibilityLevel, OptionalLimit};
+use crate::configuration::Configuration;
 
 pub(crate) mod args;
 pub(crate) mod fixed;
@@ -28,87 +24,6 @@ pub fn read_file<P: AsRef<Path>>(file_name: P) -> Result<Vec<u8>, io::Error> {
         f.read_to_end(&mut buf)?;
         Ok(buf)
     })
-}
-
-#[derive(Debug)]
-pub enum ConfigParam {
-    String(Vec<u8>),
-    Integer(i32),
-    EnumVariant(String),
-    Bool(bool),
-    Array(Vec<u8>),
-}
-
-impl ConfigParam {
-    pub fn is_string(&self) -> bool {
-        match self {
-            Self::String(_) => true,
-            _ => false,
-        }
-    }
-
-    pub fn is_integer(&self) -> bool {
-        match self {
-            Self::Integer(_) => true,
-            _ => false,
-        }
-    }
-
-    pub fn is_enum_variant(&self) -> bool {
-        match self {
-            Self::EnumVariant(_) => true,
-            _ => false,
-        }
-    }
-
-    pub fn is_bool(&self) -> bool {
-        match self {
-            Self::Bool(_) => true,
-            _ => false,
-        }
-    }
-
-    pub fn is_array(&self) -> bool {
-        match self {
-            Self::Array(_) => true,
-            _ => false,
-        }
-    }
-
-    pub fn as_string(&self) -> &Vec<u8> {
-        match self {
-            Self::String(s) => s,
-            _ => panic!("not a string"),
-        }
-    }
-
-    pub fn as_integer(&self) -> i32 {
-        match self {
-            Self::Integer(i) => *i,
-            _ => panic!("not an integer"),
-        }
-    }
-
-    pub fn as_enum_variant(&self) -> &String {
-        match self {
-            Self::EnumVariant(v) => v,
-            _ => panic!("not an enum variant"),
-        }
-    }
-
-    pub fn as_bool(&self) -> bool {
-        match self {
-            Self::Bool(b) => *b,
-            _ => panic!("not a bool"),
-        }
-    }
-
-    pub fn as_array(&self) -> &Vec<u8> {
-        match self {
-            Self::Array(a) => a,
-            _ => panic!("not an array"),
-        }
-    }
 }
 
 pub(crate) fn load_defaults(configuration: &mut Configuration) {
@@ -130,14 +45,22 @@ pub(crate) fn load_defaults(configuration: &mut Configuration) {
     // }
 
     if let Ok(f) = fs::File::open(&configuration.default_file) {
-        configuration.defaults = serde_yaml::from_reader(f).unwrap_or_else(|e| {
-            crate::error(format!(
+        match serde_yaml::from_reader(f) {
+            Ok(defaults) => configuration.defaults = defaults,
+            Err(e) => eprintln!(
                 "Error: reading {}: {}",
                 configuration.default_file.to_str().unwrap(),
                 e
-            ))
-        });
+            ),
+        }
     }
 
-    dbg!(&configuration.defaults);
+    match crate::find_file(&format!("{}.wad", PACKAGE_TARNAME), "") {
+        Some(wad) => configuration.wad_files.push(WadFileInfo {
+            name: wad,
+            src: WadSource::Pre,
+            handle: 0,
+        }),
+        None => crate::error("Ezboom.wad not found. Can't continue."),
+    }
 }

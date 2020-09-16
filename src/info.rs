@@ -4,8 +4,6 @@ use lazy_static::lazy_static;
 use misc::fixed::FRACUNIT;
 use parking_lot::RwLock;
 use rustc_hash::FxHashMap;
-use std::collections::HashMap;
-use strum::IntoEnumIterator;
 use strum_macros::EnumIter;
 
 lazy_static! {

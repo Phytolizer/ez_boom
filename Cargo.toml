@@ -11,7 +11,7 @@ bitflags = "1.2"
 lazy_static = "1.4"
 sdl2 = "0.34"
 num = "0.3"
-bounded-integer = "0.2"
+bounded-integer = { version = "0.2", features = ["serde"] }
 num_enum = "0.5"
 counted-array = "0.1"
 faccess = "0.2"
@@ -25,6 +25,7 @@ shrinkwraprs = "0.3"
 rustc-hash = "1.1"
 strum = "0.19"
 strum_macros = "0.19"
+serde-hex = "0.1"
 
 [build-dependencies]
 chrono = "0.4"
