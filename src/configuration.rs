@@ -15,7 +15,6 @@ use crate::{
     wad::WadFileInfo,
 };
 
-#[derive(Debug)]
 pub struct Configuration {
     pub defaults: Box<Defaults>,
 
@@ -85,6 +84,71 @@ pub struct Configuration {
     pub compatibility_level: CompatibilityLevel,
 
     pub comp_zombie: bool,
+    /// monsters used to telefrag only on MAP30, now they do it for spawners only
+    pub comp_telefrag: bool,
+    /// MBF encourages things to drop off of overhangs
+    pub comp_dropoff: bool,
+    /// original Doom archvile bugs, like ghosts
+    pub comp_vile: bool,
+    /// original Doom limits the number of lost souls that Pain Elementals spawn
+    pub comp_pain: bool,
+    /// original Doom lets skulls be spit through walls by Pain Elementals
+    pub comp_skull: bool,
+    /// original Doom duplicated blazing door sound
+    pub comp_blazing: bool,
+    /// MBF made door lighting changes more gradual
+    pub comp_doorlight: bool,
+    /// improvements to the game physics
+    pub comp_model: bool,
+    /// fixes to God mode
+    pub comp_god: bool,
+    /// MBF encourages things to drop off of overhangs
+    pub comp_falloff: bool,
+    /// fixes for moving floors bugs
+    pub comp_floors: bool,
+    pub comp_skymap: bool,
+    /// MBF AI change
+    pub comp_pursuit: bool,
+    /// monsters stuck in doors fix
+    pub comp_doorstuck: bool,
+    /// MBF AI change, monsters try to stay on lifts
+    pub comp_staylift: bool,
+    /// TODO see p_floor.c
+    pub comp_stairs: bool,
+    pub comp_infcheat: bool,
+    /// allow zero tags in wads
+    pub comp_zerotags: bool,
+    /// enables keygrab and noclipping mancubus fireballs
+    pub comp_moveblock: bool,
+    /// objects which aren't on the map at game start respawn at (0,0)
+    pub comp_respawn: bool,
+    /// TODO see s_sound.c
+    pub comp_sound: bool,
+    /// emulate pre-Ultimate BossDeath behavior
+    pub comp_666: bool,
+    /// enable lost souls bouncing
+    pub comp_soul: bool,
+    /// 2s mid textures don't animate
+    pub comp_maskedanim: bool,
+    /// use Doom's buggy "Ouch" face code
+    pub comp_ouchface: bool,
+    /// Max health in DEH applies only to potions
+    pub comp_maxhealth: bool,
+    /// No predefined translucency for some things
+    pub comp_translucency: bool,
+
+    pub demo_insurance: DemoInsurance,
+    pub dog_jumping: bool,
+
+    pub rngseed: u32,
+    pub gametic: i32,
+
+    pub sdl_window: Option<sdl2::video::Window>,
+    pub screen_resolutions_list: Vec<String>,
+    pub screen_resolution: usize,
+    pub screen_resolution_lowest: String,
+    pub use_fullscreen: bool,
+    pub desired_fullscreen: bool,
 }
 
 impl Default for Configuration {
@@ -155,8 +219,47 @@ impl Default for Configuration {
             console_player: 0,
 
             compatibility_level: defaults.default_compatibility_level,
-            
+
             comp_zombie: defaults.comp_zombie,
+            comp_telefrag: defaults.comp_telefrag,
+            comp_dropoff: defaults.comp_dropoff,
+            comp_vile: defaults.comp_vile,
+            comp_pain: defaults.comp_pain,
+            comp_skull: defaults.comp_skull,
+            comp_blazing: defaults.comp_blazing,
+            comp_doorlight: defaults.comp_doorlight,
+            comp_model: defaults.comp_model,
+            comp_god: defaults.comp_god,
+            comp_falloff: defaults.comp_falloff,
+            comp_floors: defaults.comp_floors,
+            comp_skymap: defaults.comp_skymap,
+            comp_pursuit: defaults.comp_pursuit,
+            comp_doorstuck: defaults.comp_doorstuck,
+            comp_staylift: defaults.comp_staylift,
+            comp_stairs: defaults.comp_stairs,
+            comp_infcheat: defaults.comp_infcheat,
+            comp_zerotags: defaults.comp_zerotags,
+            comp_moveblock: defaults.comp_moveblock,
+            comp_respawn: false,
+            comp_sound: defaults.comp_sound,
+            comp_666: defaults.comp_666,
+            comp_soul: defaults.comp_soul,
+            comp_maskedanim: defaults.comp_maskedanim,
+            comp_ouchface: defaults.comp_ouchface,
+            comp_maxhealth: defaults.comp_maxhealth,
+            comp_translucency: defaults.comp_translucency,
+
+            demo_insurance: defaults.demo_insurance,
+            dog_jumping: defaults.dog_jumping,
+            rngseed: 1993,
+            gametic: 0,
+
+            sdl_window: None,
+            screen_resolutions_list: vec![],
+            screen_resolution: 0,
+            screen_resolution_lowest: String::new(),
+            use_fullscreen: defaults.use_fullscreen,
+            desired_fullscreen: defaults.use_fullscreen,
         }
     }
 }
@@ -2785,7 +2888,7 @@ impl Default for OptionalLimit {
     }
 }
 
-#[derive(Debug, Copy, Clone, Serialize, Deserialize)]
+#[derive(Debug, Copy, Clone, Serialize, Deserialize, PartialEq)]
 pub enum DemoInsurance {
     None,
     Always,

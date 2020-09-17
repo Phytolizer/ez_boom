@@ -29,6 +29,8 @@ mod system;
 mod tables;
 /// Contains types related to thinkers.
 mod think;
+/// Contains low-level video code.
+mod video;
 /// Contains types and functions related to reading the .wad format.
 mod wad;
 
@@ -111,31 +113,45 @@ fn main() {
     read_args(&mut configuration);
     print_version();
 
-    let sdl = pre_init_graphics();
+    let sdl = pre_init_graphics(&configuration);
 
-    doom_main(&mut configuration);
+    doom_main(sdl, &mut configuration);
 }
 
 /// Initialize the SDL library.
-fn pre_init_graphics() -> sdl2::Sdl {
-    match sdl2::init() {
+fn pre_init_graphics(configuration: &Configuration) -> (sdl2::Sdl, Option<sdl2::VideoSubsystem>) {
+    let sdl = match sdl2::init() {
         Ok(sdl) => sdl,
         Err(e) => {
             error(format!("Could not initialize SDL [{}]", e));
         }
-    }
+    };
+    let video_subsystem = if !(configuration.args.check_parm("-nodraw").is_some()
+        && configuration.args.check_parm("-nosound").is_some())
+    {
+        Some(
+            sdl.video()
+                .unwrap_or_else(|e| error(format!("Could not initialize SDL_video [{}]", e))),
+        )
+    } else {
+        None
+    };
+    (sdl, video_subsystem)
 }
 
 /// Run some final setup and enter the game loop.
-fn doom_main(configuration: &mut Configuration) {
-    doom_main_setup(configuration);
+fn doom_main(sdl: (sdl2::Sdl, Option<sdl2::VideoSubsystem>), configuration: &mut Configuration) {
+    doom_main_setup(sdl, configuration);
 
     doom_loop();
 }
 
 /// Setup that is required for Doom to run. Contains much argument
 /// handling.
-fn doom_main_setup(configuration: &mut Configuration) {
+fn doom_main_setup(
+    sdl: (sdl2::Sdl, Option<sdl2::VideoSubsystem>),
+    configuration: &mut Configuration,
+) {
     setup_console_masks(configuration);
 
     loop {
@@ -350,6 +366,11 @@ fn doom_main_setup(configuration: &mut Configuration) {
     }
 
     game::reload_defaults(configuration);
+
+    lprint!(OutputLevel::INFO, "video::init: allocate screens.");
+    video::init();
+
+    video::init_screen_resolution(&sdl.1, configuration);
 }
 
 fn identify_version(configuration: &mut Configuration) {
