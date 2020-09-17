@@ -1,5 +1,7 @@
 use crate::args::ArgList;
-use crate::configuration::{Configuration, PlayerHelpers, SkillLevel};
+use crate::configuration::{CompatibilityLevel, Configuration, PlayerHelpers, SkillLevel};
+use num_enum::TryFromPrimitive;
+use std::str::FromStr;
 
 pub fn reload_defaults(configuration: &mut Configuration) {
     configuration.weapon_recoil = configuration.defaults.weapon_recoil;
@@ -38,6 +40,41 @@ pub fn reload_defaults(configuration: &mut Configuration) {
     configuration.console_player = 0;
 
     configuration.compatibility_level = configuration.defaults.default_compatibility_level;
+    if let Some(i) = configuration.args.check_parm("-complevel") {
+        if i < configuration.args.len() - 1 {
+            // try as integer
+            match &configuration.args[i + 1].parse::<i32>() {
+                Ok(complevel) => {
+                    configuration.compatibility_level =
+                        CompatibilityLevel::try_from_primitive(*complevel).unwrap_or_else(|_| {
+                            // not in the enum, -1 is special though
+                            if *complevel == -1 {
+                                CompatibilityLevel::PrBoomLatest
+                            } else {
+                                crate::error(format!(
+                                    "Unknown compatibility level {}",
+                                    configuration.args[i + 1]
+                                ));
+                            }
+                        })
+                }
+                Err(_) => {
+                    // try as enum variant string
+                    configuration.compatibility_level = CompatibilityLevel::from_str(
+                        &configuration.args[i + 1],
+                    )
+                    .unwrap_or_else(|_| {
+                        crate::error(format!(
+                            "Unknown compatibility level {}",
+                            configuration.args[i + 1]
+                        ))
+                    })
+                }
+            }
+        }
+    }
+
+    
 }
 
 pub fn get_helpers(configuration: &Configuration) -> PlayerHelpers {

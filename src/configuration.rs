@@ -1,4 +1,5 @@
 use bounded_integer::bounded_integer;
+use num_enum::TryFromPrimitive;
 use serde_derive::{Deserialize, Serialize};
 use serde_hex::{SerHex, StrictPfx};
 use std::{convert::TryFrom, env, fmt::Display, path::PathBuf};
@@ -82,6 +83,8 @@ pub struct Configuration {
     pub console_player: usize,
 
     pub compatibility_level: CompatibilityLevel,
+
+    pub comp_zombie: bool,
 }
 
 impl Default for Configuration {
@@ -152,6 +155,8 @@ impl Default for Configuration {
             console_player: 0,
 
             compatibility_level: defaults.default_compatibility_level,
+            
+            comp_zombie: defaults.comp_zombie,
         }
     }
 }
@@ -2725,9 +2730,12 @@ fn default_mus_dm2int() -> String {
     String::from("dm2int.mp3")
 }
 
-#[derive(Debug, Copy, Clone, EnumString, Serialize, Deserialize)]
+#[repr(i32)]
+#[derive(
+    Debug, Copy, Clone, EnumString, Serialize, Deserialize, TryFromPrimitive, PartialOrd, PartialEq,
+)]
 pub enum CompatibilityLevel {
-    DoomV12,
+    DoomV12 = 0,
     DoomV1666,
     Doom2V19,
     UltimateDoom,
